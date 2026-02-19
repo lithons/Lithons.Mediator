@@ -16,13 +16,4 @@
     <PackageReference Include="Microsoft.Extensions.Options" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Contexts\" />
-    <Folder Include="Contracts\" />
-    <Folder Include="Middleware\Command\Contracts\" />
-    <Folder Include="Middleware\Notification\Contracts\" />
-    <Folder Include="Middleware\Request\Contracts\" />
-    <Folder Include="Models\" />
-  </ItemGroup>
-
 </Project>

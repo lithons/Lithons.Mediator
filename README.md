@@ -1,5 +1,11 @@
 # Lithons.Mediator
 
+[![NuGet Version](https://img.shields.io/nuget/v/Lithons.Mediator)](https://www.nuget.org/packages/Lithons.Mediator)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/Lithons.Mediator)](https://www.nuget.org/packages/Lithons.Mediator)
+[![Build](https://github.com/lithons/Lithons.Mediator/actions/workflows/build.yml/badge.svg)](https://github.com/lithons/Lithons.Mediator/actions/workflows/build.yml)
+[![.NET](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/lithons/Lithons.Mediator/blob/main/LICENSE)
+
 A lightweight mediator implementation for .NET with first-class support for **requests**, **commands**, and **notifications** — each with its own configurable middleware pipeline.
 
 ## Installation
