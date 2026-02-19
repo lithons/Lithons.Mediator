@@ -1,11 +1,11 @@
-using Lithons.Mediator.Contracts;
+using Lithons.Mediator.Abstractions.Contracts;
+using Lithons.Mediator.Abstractions.Middleware.Command.Contracts;
+using Lithons.Mediator.Abstractions.Middleware.Notification.Contracts;
+using Lithons.Mediator.Abstractions.Middleware.Request.Contracts;
 using Lithons.Mediator.Exceptions;
 using Lithons.Mediator.Middleware.Command;
-using Lithons.Mediator.Middleware.Command.Contracts;
 using Lithons.Mediator.Middleware.Notification;
-using Lithons.Mediator.Middleware.Notification.Contracts;
 using Lithons.Mediator.Middleware.Request;
-using Lithons.Mediator.Middleware.Request.Contracts;
 using Lithons.Mediator.Options;
 using Lithons.Mediator.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;

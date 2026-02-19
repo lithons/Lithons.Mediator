@@ -1,6 +1,7 @@
-using Lithons.Mediator.Contracts;
-using Lithons.Mediator.Contexts;
-using Lithons.Mediator.Middleware.Notification.Contracts;
+using Lithons.Mediator.Abstractions.Contexts;
+using Lithons.Mediator.Abstractions.Contracts;
+using Lithons.Mediator.Abstractions.Middleware.Notification;
+using Lithons.Mediator.Abstractions.Middleware.Notification.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 

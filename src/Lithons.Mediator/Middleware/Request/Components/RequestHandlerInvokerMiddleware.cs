@@ -1,6 +1,7 @@
-using Lithons.Mediator.Contracts;
+using Lithons.Mediator.Abstractions.Contracts;
+using Lithons.Mediator.Abstractions.Middleware.Request;
+using Lithons.Mediator.Abstractions.Middleware.Request.Contracts;
 using Lithons.Mediator.Internal;
-using Lithons.Mediator.Middleware.Request.Contracts;
 
 namespace Lithons.Mediator.Middleware.Request.Components;
 

@@ -1,10 +1,15 @@
-using Lithons.Mediator.Contracts;
-using Lithons.Mediator.Middleware.Command.Contracts;
-using Lithons.Mediator.Middleware.Notification.Contracts;
-using Lithons.Mediator.Middleware.Request.Contracts;
+using Lithons.Mediator.Abstractions.Contracts;
+using Lithons.Mediator.Abstractions.Middleware.Command.Contracts;
+using Lithons.Mediator.Abstractions.Middleware.Notification.Contracts;
+using Lithons.Mediator.Abstractions.Middleware.Request.Contracts;
+using Lithons.Mediator.CommandStrategies;
+using Lithons.Mediator.Exceptions;
+using Lithons.Mediator.NotificationStrategies;
+using Lithons.Mediator.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace Lithons.Mediator.Tests;
 
@@ -177,5 +182,79 @@ public class ServiceCollectionExtensionsTests
         var mediator = scope.ServiceProvider.GetService<IMediator>();
 
         Assert.NotNull(mediator);
+    }
+
+    [Fact]
+    public void AddMediator_ICommandSender_IsSameInstanceAsIMediator()
+    {
+        var sp = BuildServiceProvider();
+        using var scope = sp.CreateScope();
+
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var sender = scope.ServiceProvider.GetRequiredService<ICommandSender>();
+
+        Assert.Same(mediator, sender);
+    }
+
+    [Fact]
+    public void AddMediator_INotificationSender_IsSameInstanceAsIMediator()
+    {
+        var sp = BuildServiceProvider();
+        using var scope = sp.CreateScope();
+
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var sender = scope.ServiceProvider.GetRequiredService<INotificationSender>();
+
+        Assert.Same(mediator, sender);
+    }
+
+    [Fact]
+    public void AddMediator_CalledTwice_DoesNotRegisterDuplicateServices()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+        services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
+        services.AddMediator();
+        services.AddMediator();
+
+        using var scope = services.BuildServiceProvider().CreateScope();
+        var mediators = scope.ServiceProvider.GetServices<IMediator>().ToList();
+
+        Assert.Single(mediators);
+    }
+
+    private class DuplicateSomeCommandHandler : ICommandHandler<SomeCommand, int>
+    {
+        public Task<int> HandleAsync(SomeCommand command, CancellationToken cancellationToken)
+            => Task.FromResult(command.Value);
+    }
+
+    [Fact]
+    public void AddCommandHandler_DuplicateHandlers_ThrowsDuplicateHandlerException()
+    {
+        Assert.Throws<DuplicateHandlerException>(() =>
+        {
+            BuildServiceProvider(s =>
+            {
+                s.AddCommandHandler<SomeCommandHandler>();
+                s.AddCommandHandler<DuplicateSomeCommandHandler>();
+            });
+        });
+    }
+
+    [Fact]
+    public void MediatorOptions_DefaultNotificationStrategy_IsSequential()
+    {
+        var options = new MediatorOptions();
+
+        Assert.IsType<SequentialStrategy>(options.DefaultNotificationStrategy);
+    }
+
+    [Fact]
+    public void MediatorOptions_DefaultCommandStrategy_IsDefault()
+    {
+        var options = new MediatorOptions();
+
+        Assert.IsType<DefaultStrategy>(options.DefaultCommandStrategy);
     }
 }

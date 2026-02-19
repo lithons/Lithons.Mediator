@@ -1,7 +1,8 @@
-using Lithons.Mediator.Contracts;
-using Lithons.Mediator.Contexts;
+using Lithons.Mediator.Abstractions.Contexts;
+using Lithons.Mediator.Abstractions.Contracts;
+using Lithons.Mediator.Abstractions.Middleware.Command;
+using Lithons.Mediator.Abstractions.Middleware.Command.Contracts;
 using Lithons.Mediator.Internal;
-using Lithons.Mediator.Middleware.Command.Contracts;
 
 namespace Lithons.Mediator.Middleware.Command.Components;
 

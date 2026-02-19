@@ -1,8 +1,10 @@
-using Lithons.Mediator.Contracts;
+using Lithons.Mediator.Abstractions.Contracts;
+using Lithons.Mediator.Abstractions.Middleware.Command;
 using Lithons.Mediator.Exceptions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Threading.Channels;
 
 namespace Lithons.Mediator.Tests;
 
@@ -234,6 +236,87 @@ public class MediatorTests
         await mediator.SendAsync(new OrderPlacedNotification(30), TestContext.Current.CancellationToken);
 
         Assert.Equal([10, 20, 30], handler.Received);
+    }
+
+    #endregion
+
+    #region CancellationToken
+
+    private record TokenRequest : IRequest<CancellationToken>;
+
+    private class TokenRequestHandler : IRequestHandler<TokenRequest, CancellationToken>
+    {
+        public Task<CancellationToken> HandleAsync(TokenRequest request, CancellationToken cancellationToken)
+            => Task.FromResult(cancellationToken);
+    }
+
+    [Fact]
+    public async Task SendAsync_Request_PropagatesCancellationToken()
+    {
+        using var scope = CreateScope(s => s.AddRequestHandler<TokenRequestHandler>());
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        using var cts = new CancellationTokenSource();
+
+        var received = await mediator.SendAsync(new TokenRequest(), cts.Token);
+
+        Assert.Equal(cts.Token, received);
+    }
+
+    private record TokenCommand : ICommand<CancellationToken>;
+
+    private class TokenCommandHandler : ICommandHandler<TokenCommand, CancellationToken>
+    {
+        public Task<CancellationToken> HandleAsync(TokenCommand command, CancellationToken cancellationToken)
+            => Task.FromResult(cancellationToken);
+    }
+
+    [Fact]
+    public async Task SendAsync_Command_PropagatesCancellationToken()
+    {
+        using var scope = CreateScope(s => s.AddCommandHandler<TokenCommandHandler>());
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        using var cts = new CancellationTokenSource();
+
+        var received = await mediator.SendAsync(new TokenCommand(), cts.Token);
+
+        Assert.Equal(cts.Token, received);
+    }
+
+    #endregion
+
+    #region BackgroundStrategy
+
+    private class InMemoryCommandsChannel : ICommandsChannel
+    {
+        private readonly Channel<CommandContext> _channel = Channel.CreateUnbounded<CommandContext>();
+        public ChannelWriter<CommandContext> Writer => _channel.Writer;
+        public ChannelReader<CommandContext> Reader => _channel.Reader;
+    }
+
+    private record BackgroundCommand(int Value) : ICommand<int>;
+
+    private class BackgroundCommandHandler : ICommandHandler<BackgroundCommand, int>
+    {
+        public Task<int> HandleAsync(BackgroundCommand command, CancellationToken cancellationToken)
+            => Task.FromResult(command.Value);
+    }
+
+    [Fact]
+    public async Task SendAsync_Command_WithBackgroundStrategy_WritesCommandToChannel()
+    {
+        var commandsChannel = new InMemoryCommandsChannel();
+        using var scope = CreateScope(s =>
+        {
+            s.AddCommandHandler<BackgroundCommandHandler>();
+            s.AddSingleton<ICommandsChannel>(commandsChannel);
+        });
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
+        await mediator.SendAsync(new BackgroundCommand(42), CommandStrategy.Background, TestContext.Current.CancellationToken);
+
+        Assert.True(commandsChannel.Reader.TryRead(out var written));
+        Assert.IsType<BackgroundCommand>(written.Command);
+        Assert.Equal(42, ((BackgroundCommand)written.Command).Value);
     }
 
     #endregion
