@@ -1,7 +1,6 @@
 <Project>
 
   <PropertyGroup>
-    <PackageId>Lithons.Mediator</PackageId>
     <Authors>lithons</Authors>
     <Description>A lightweight mediator implementation for .NET.</Description>
     <PackageTags>mediator;cqrs;dotnet</PackageTags>
