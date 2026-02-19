@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/solution/">
+    <File Path="Directory.Packages.props" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Lithons.Mediator/Lithons.Mediator.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Lithons.Mediator.Benchmarks/Lithons.Mediator.Benchmarks.csproj" />
+    <Project Path="tests/Lithons.Mediator.Tests/Lithons.Mediator.Tests.csproj" />
+  </Folder>
+</Solution>
