@@ -1,0 +1,22 @@
+<Project>
+
+  <PropertyGroup>
+    <PackageId>Lithons.Mediator</PackageId>
+    <Authors>lithons</Authors>
+    <Description>A lightweight mediator implementation for .NET.</Description>
+    <PackageTags>mediator;cqrs;dotnet</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/lithons/Lithons.Mediator</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>
