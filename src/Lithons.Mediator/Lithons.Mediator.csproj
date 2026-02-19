@@ -6,8 +6,6 @@
     <Nullable>enable</Nullable>
     <PackageId>Lithons.Mediator</PackageId>
   </PropertyGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\Lithons.Mediator.Abstractions\Lithons.Mediator.Abstractions.csproj" />
   </ItemGroup>
 
@@ -17,8 +15,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Contexts\" />
-    <Folder Include="Contracts\" />
     <Folder Include="Middleware\Command\Contracts\" />
     <Folder Include="Middleware\Notification\Contracts\" />
     <Folder Include="Middleware\Request\Contracts\" />
