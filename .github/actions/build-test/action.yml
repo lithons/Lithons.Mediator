@@ -1,0 +1,28 @@
+name: Build and Test
+description: Sets up .NET, restores, builds, and tests the solution.
+
+inputs:
+  version:
+    description: Package version to embed in the build (e.g. 1.0.0-preview.1)
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.x'
+
+    - name: Restore
+      shell: bash
+      run: dotnet restore
+
+    - name: Build
+      shell: bash
+      run: dotnet build --no-restore --configuration Release ${{ inputs.version != '' && format('/p:Version={0}', inputs.version) || '' }}
+
+    - name: Test
+      shell: bash
+      run: dotnet test tests/Lithons.Mediator.Tests/Lithons.Mediator.Tests.csproj --no-build --configuration Release

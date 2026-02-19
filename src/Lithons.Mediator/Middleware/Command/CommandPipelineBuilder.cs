@@ -1,4 +1,5 @@
-using Lithons.Mediator.Middleware.Command.Contracts;
+using Lithons.Mediator.Abstractions.Middleware.Command;
+using Lithons.Mediator.Abstractions.Middleware.Command.Contracts;
 
 namespace Lithons.Mediator.Middleware.Command;
 

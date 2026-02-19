@@ -1,4 +1,5 @@
-using Lithons.Mediator.Middleware.Notification.Contracts;
+using Lithons.Mediator.Abstractions.Middleware.Notification;
+using Lithons.Mediator.Abstractions.Middleware.Notification.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Lithons.Mediator.Middleware.Notification;

@@ -1,4 +1,4 @@
-using Lithons.Mediator.Contracts;
+using Lithons.Mediator.Abstractions.Contracts;
 
 namespace Lithons.Mediator.Options;
 

@@ -1,5 +1,5 @@
-using Lithons.Mediator.Contracts;
-using Lithons.Mediator.Contexts;
+using Lithons.Mediator.Abstractions.Contexts;
+using Lithons.Mediator.Abstractions.Contracts;
 using Lithons.Mediator.Internal;
 
 namespace Lithons.Mediator.CommandStrategies;

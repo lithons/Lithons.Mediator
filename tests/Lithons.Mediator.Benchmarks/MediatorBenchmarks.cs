@@ -1,5 +1,5 @@
 using BenchmarkDotNet.Attributes;
-using Lithons.Mediator.Contracts;
+using Lithons.Mediator.Abstractions.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;

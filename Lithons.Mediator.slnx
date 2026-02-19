@@ -4,6 +4,7 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/Lithons.Mediator.Abstractions/Lithons.Mediator.Abstractions.csproj" />
     <Project Path="src/Lithons.Mediator/Lithons.Mediator.csproj" />
   </Folder>
   <Folder Name="/tests/">

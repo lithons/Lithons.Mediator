@@ -1,5 +1,5 @@
-using Lithons.Mediator.Contexts;
-using Lithons.Mediator.Contracts;
+using Lithons.Mediator.Abstractions.Contexts;
+using Lithons.Mediator.Abstractions.Contracts;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 

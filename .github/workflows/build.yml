@@ -14,16 +14,5 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.x'
-
-      - name: Restore
-        run: dotnet restore
-
-      - name: Build
-        run: dotnet build --no-restore --configuration Release
-
-      - name: Test
-        run: dotnet test tests/Lithons.Mediator.Tests/Lithons.Mediator.Tests.csproj --no-build --configuration Release
+      - name: Build and Test
+        uses: ./.github/actions/build-test

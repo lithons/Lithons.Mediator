@@ -1,10 +1,10 @@
-using Lithons.Mediator.Contracts;
+using Lithons.Mediator.Abstractions.Contracts;
+using Lithons.Mediator.Abstractions.Middleware.Command.Contracts;
+using Lithons.Mediator.Abstractions.Middleware.Notification.Contracts;
+using Lithons.Mediator.Abstractions.Middleware.Request.Contracts;
 using Lithons.Mediator.Middleware.Command;
-using Lithons.Mediator.Middleware.Command.Contracts;
 using Lithons.Mediator.Middleware.Notification;
-using Lithons.Mediator.Middleware.Notification.Contracts;
 using Lithons.Mediator.Middleware.Request;
-using Lithons.Mediator.Middleware.Request.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -136,6 +136,52 @@ public class RequestPipelineMiddlewareTests
         Assert.True(middlewareCalled);
     }
 
+    [Fact]
+    public async Task CommandPipeline_MultipleMiddlewares_ExecuteInRegistrationOrder()
+    {
+        var sp = BuildServiceProvider(s => s.AddCommandHandler<PingCommandHandler>());
+        var pipeline = sp.GetRequiredService<ICommandPipeline>();
+        var order = new List<int>();
+
+        pipeline.Setup(b =>
+        {
+            b.Use(next => async ctx => { order.Add(1); await next(ctx); });
+            b.Use(next => async ctx => { order.Add(2); await next(ctx); });
+            b.UseCommandHandlers();
+        });
+
+        using var scope = sp.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        await mediator.SendAsync(new PingCommand(), TestContext.Current.CancellationToken);
+
+        Assert.Equal([1, 2], order);
+    }
+
+    [Fact]
+    public async Task CommandPipeline_MiddlewareCanShortCircuit_HandlerNotCalled()
+    {
+        var sp = BuildServiceProvider(s => s.AddCommandHandler<PingCommandHandler>());
+        var pipeline = sp.GetRequiredService<ICommandPipeline>();
+        var handlerCalled = false;
+
+        pipeline.Setup(b =>
+        {
+            b.Use(_ => _ => ValueTask.CompletedTask);
+            b.Use(next => async ctx =>
+            {
+                handlerCalled = true;
+                await next(ctx);
+            });
+            b.UseCommandHandlers();
+        });
+
+        using var scope = sp.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        await mediator.SendAsync(new PingCommand(), TestContext.Current.CancellationToken);
+
+        Assert.False(handlerCalled);
+    }
+
     private record TestNotification : INotification;
     private class TestNotificationHandler : INotificationHandler<TestNotification>
     {
@@ -165,5 +211,26 @@ public class RequestPipelineMiddlewareTests
         await mediator.SendAsync(new TestNotification(), TestContext.Current.CancellationToken);
 
         Assert.True(middlewareCalled);
+    }
+
+    [Fact]
+    public async Task NotificationPipeline_MultipleMiddlewares_ExecuteInRegistrationOrder()
+    {
+        var sp = BuildServiceProvider(s => s.AddNotificationHandler<TestNotificationHandler>());
+        var pipeline = sp.GetRequiredService<INotificationPipeline>();
+        var order = new List<int>();
+
+        pipeline.Setup(b =>
+        {
+            b.Use(next => async ctx => { order.Add(1); await next(ctx); });
+            b.Use(next => async ctx => { order.Add(2); await next(ctx); });
+            b.UseNotificationHandlers();
+        });
+
+        using var scope = sp.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        await mediator.SendAsync(new TestNotification(), TestContext.Current.CancellationToken);
+
+        Assert.Equal([1, 2], order);
     }
 }
