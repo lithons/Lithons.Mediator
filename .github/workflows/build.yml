@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      pull-requests: write
 
     steps:
       - name: Checkout
@@ -16,3 +19,11 @@ jobs:
 
       - name: Build and Test
         uses: ./.github/actions/build-test
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Test Results
+          path: TestResults/*.trx
+          reporter: dotnet-trx
