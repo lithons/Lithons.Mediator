@@ -4,12 +4,13 @@ using Lithons.Mediator.Abstractions.Middleware.Notification.Contracts;
 using Lithons.Mediator.Abstractions.Middleware.Request.Contracts;
 using Lithons.Mediator.CommandStrategies;
 using Lithons.Mediator.Exceptions;
+using Lithons.Mediator.Extensions;
 using Lithons.Mediator.NotificationStrategies;
 using Lithons.Mediator.Options;
+using Lithons.Mediator.Tests.ScanHandlers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 namespace Lithons.Mediator.Tests;
 
@@ -114,7 +115,7 @@ public class ServiceCollectionExtensionsTests
     private record SomeRequest(int Value) : IRequest<int>;
     private class SomeRequestHandler : IRequestHandler<SomeRequest, int>
     {
-        public Task<int> HandleAsync(SomeRequest request, CancellationToken cancellationToken)
+        public Task<int> Handle(SomeRequest request, CancellationToken cancellationToken)
             => Task.FromResult(request.Value);
     }
 
@@ -132,7 +133,7 @@ public class ServiceCollectionExtensionsTests
     private record SomeCommand(int Value) : ICommand<int>;
     private class SomeCommandHandler : ICommandHandler<SomeCommand, int>
     {
-        public Task<int> HandleAsync(SomeCommand command, CancellationToken cancellationToken)
+        public Task<int> Handle(SomeCommand command, CancellationToken cancellationToken)
             => Task.FromResult(command.Value);
     }
 
@@ -150,7 +151,7 @@ public class ServiceCollectionExtensionsTests
     private record SomeNotification : INotification;
     private class SomeNotificationHandler : INotificationHandler<SomeNotification>
     {
-        public Task HandleAsync(SomeNotification notification, CancellationToken cancellationToken)
+        public Task Handle(SomeNotification notification, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
 
@@ -225,7 +226,7 @@ public class ServiceCollectionExtensionsTests
 
     private class DuplicateSomeCommandHandler : ICommandHandler<SomeCommand, int>
     {
-        public Task<int> HandleAsync(SomeCommand command, CancellationToken cancellationToken)
+        public Task<int> Handle(SomeCommand command, CancellationToken cancellationToken)
             => Task.FromResult(command.Value);
     }
 
@@ -256,5 +257,66 @@ public class ServiceCollectionExtensionsTests
         var options = new MediatorOptions();
 
         Assert.IsType<DefaultStrategy>(options.DefaultCommandStrategy);
+    }
+
+    [Fact]
+    public void AddHandlersFromAssembly_AssemblyWithNoHandlers_RegistersNothing()
+    {
+        var sp = BuildServiceProvider(s =>
+            s.AddHandlersFromAssembly(typeof(IRequest).Assembly));
+        using var scope = sp.CreateScope();
+
+        var requestHandlers = scope.ServiceProvider.GetServices<IRequestHandler>().ToList();
+        var commandHandlers = scope.ServiceProvider.GetServices<ICommandHandler>().ToList();
+        var notificationHandlers = scope.ServiceProvider.GetServices<INotificationHandler>().ToList();
+
+        Assert.Empty(requestHandlers);
+        Assert.Empty(commandHandlers);
+        Assert.Empty(notificationHandlers);
+    }
+
+    [Fact]
+    public void AddHandlersFromAssembly_DuplicateHandlers_ThrowsDuplicateHandlerException()
+    {
+        Assert.Throws<DuplicateHandlerException>(() =>
+            BuildServiceProvider(s =>
+                s.AddHandlersFromAssembly(
+                    typeof(ServiceCollectionExtensionsTests).Assembly,
+                    t => t.Namespace == "Lithons.Mediator.Tests")));
+    }
+
+    [Fact]
+    public void AddHandlersFromAssembly_WithFilter_RegistersOnlyMatchingHandlers()
+    {
+        var sp = BuildServiceProvider(s =>
+            s.AddHandlersFromAssembly(
+                typeof(ServiceCollectionExtensionsTests).Assembly,
+                t => t.Namespace == "Lithons.Mediator.Tests.ScanHandlers"));
+        using var scope = sp.CreateScope();
+
+        var requestHandlers = scope.ServiceProvider.GetServices<IRequestHandler>().ToList();
+        var commandHandlers = scope.ServiceProvider.GetServices<ICommandHandler>().ToList();
+        var notificationHandlers = scope.ServiceProvider.GetServices<INotificationHandler>().ToList();
+
+        Assert.Single(requestHandlers);
+        Assert.IsType<ScanRequestHandler>(requestHandlers[0]);
+        Assert.Single(commandHandlers);
+        Assert.IsType<ScanCommandHandler>(commandHandlers[0]);
+        Assert.Single(notificationHandlers);
+        Assert.IsType<ScanNotificationHandler>(notificationHandlers[0]);
+    }
+
+    [Fact]
+    public void AddHandlersFromAssemblyContaining_UsesTypeAssembly()
+    {
+        var services1 = new ServiceCollection();
+        services1.AddMediator();
+        services1.AddHandlersFromAssembly(typeof(IRequest).Assembly);
+
+        var services2 = new ServiceCollection();
+        services2.AddMediator();
+        services2.AddHandlersFromAssemblyContaining<IRequest>();
+
+        Assert.Equal(services1.Count, services2.Count);
     }
 }

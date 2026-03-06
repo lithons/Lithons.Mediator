@@ -16,7 +16,7 @@ public class NotificationStrategyTests
         public int CallOrder { get; private set; }
         private static int _counter;
 
-        public Task HandleAsync(TestNotification notification, CancellationToken cancellationToken)
+        public Task Handle(TestNotification notification, CancellationToken cancellationToken)
         {
             CallOrder = Interlocked.Increment(ref _counter);
             Received.Add(notification.Message);
@@ -103,7 +103,7 @@ public class NotificationStrategyTests
 
     private class DelayedHandler(int delayMs, int id, List<int> order) : INotificationHandler<TestNotification>
     {
-        public async Task HandleAsync(TestNotification notification, CancellationToken cancellationToken)
+        public async Task Handle(TestNotification notification, CancellationToken cancellationToken)
         {
             await Task.Delay(delayMs, cancellationToken);
             order.Add(id);
@@ -112,7 +112,7 @@ public class NotificationStrategyTests
 
     private class ThrowingHandler : INotificationHandler<TestNotification>
     {
-        public Task HandleAsync(TestNotification notification, CancellationToken cancellationToken)
+        public Task Handle(TestNotification notification, CancellationToken cancellationToken)
             => throw new InvalidOperationException("handler error");
     }
 
@@ -173,7 +173,7 @@ public class NotificationStrategyTests
     {
         public bool Completed { get; private set; }
 
-        public async Task HandleAsync(TestNotification notification, CancellationToken cancellationToken)
+        public async Task Handle(TestNotification notification, CancellationToken cancellationToken)
         {
             signal.TrySetResult();
             await waitFor.Task.WaitAsync(cancellationToken);

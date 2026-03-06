@@ -7,20 +7,28 @@ using Lithons.Mediator.Middleware.Command;
 using Lithons.Mediator.Middleware.Notification;
 using Lithons.Mediator.Middleware.Request;
 using Lithons.Mediator.Options;
-using Lithons.Mediator.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using System.Reflection;
 
-namespace Microsoft.Extensions.DependencyInjection;
+namespace Lithons.Mediator.Extensions;
 
 public static class MediatorServiceCollectionExtensions
 {
     extension(IServiceCollection services)
     {
-        public IServiceCollection AddMediator(Action<MediatorOptions>? configure = null)
+        public IServiceCollection AddMediator(Action<MediatorConfiguration>? configure = null)
         {
-            services.Configure(configure ?? (_ => { }));
+            var config = new MediatorConfiguration(services);
+            configure?.Invoke(config);
 
-            services.TryAddScoped<IMediator, Mediator>();
+            services.Configure<MediatorOptions>(opts =>
+            {
+                opts.DefaultNotificationStrategy = config.DefaultNotificationStrategy;
+                opts.DefaultCommandStrategy = config.DefaultCommandStrategy;
+            });
+
+            services.TryAddScoped<IMediator, Services.Mediator>();
             services.TryAddScoped<IRequestSender>(sp => sp.GetRequiredService<IMediator>());
             services.TryAddScoped<ICommandSender>(sp => sp.GetRequiredService<IMediator>());
             services.TryAddScoped<INotificationSender>(sp => sp.GetRequiredService<IMediator>());
@@ -34,64 +42,103 @@ public static class MediatorServiceCollectionExtensions
         public IServiceCollection AddRequestHandler<THandler>()
             where THandler : class, IRequestHandler
         {
-            foreach (var handler in typeof(THandler).GetInterfaces()
-                         .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IRequestHandler<,>)))
-            {
-                var requestType = handler.GetGenericArguments()[0];
-                if (services.Any(d => d.ServiceType == handler))
-                    throw new DuplicateHandlerException(requestType);
-
-                services.AddScoped(handler, sp => sp.GetRequiredService<THandler>());
-            }
-
-            services.AddScoped<THandler>();
-            services.AddScoped<IRequestHandler>(sp => sp.GetRequiredService<THandler>());
-
+            RegisterRequestHandlerCore(services, typeof(THandler));
             return services;
         }
 
         public IServiceCollection AddCommandHandler<THandler>()
             where THandler : class, ICommandHandler
         {
-            foreach (var handler in typeof(THandler).GetInterfaces()
-                         .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICommandHandler<,>)))
-            {
-                var commandType = handler.GetGenericArguments()[0];
-                if (services.Any(d => d.ServiceType == handler))
-                    throw new DuplicateHandlerException(commandType);
-
-                services.AddScoped(handler, sp => sp.GetRequiredService<THandler>());
-            }
-
-            foreach (var handler in typeof(THandler).GetInterfaces()
-                         .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICommandHandler<>)))
-            {
-                var commandType = handler.GetGenericArguments()[0];
-                if (services.Any(d => d.ServiceType == handler))
-                    throw new DuplicateHandlerException(commandType);
-
-                services.AddScoped(handler, sp => sp.GetRequiredService<THandler>());
-            }
-
-            services.AddScoped<THandler>();
-            services.AddScoped<ICommandHandler>(sp => sp.GetRequiredService<THandler>());
-
+            RegisterCommandHandlerCore(services, typeof(THandler));
             return services;
         }
 
         public IServiceCollection AddNotificationHandler<THandler>()
             where THandler : class, INotificationHandler
         {
-            services.AddScoped<THandler>();
-            services.AddScoped<INotificationHandler>(sp => sp.GetRequiredService<THandler>());
+            RegisterNotificationHandlerCore(services, typeof(THandler));
+            return services;
+        }
 
-            foreach (var handler in typeof(THandler).GetInterfaces()
-                         .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(INotificationHandler<>)))
+        public IServiceCollection AddHandlersFromAssembly(Assembly assembly, Func<Type, bool>? filter = null)
+        {
+            var handlerTypes = assembly.GetTypes()
+                .Where(t => t is { IsAbstract: false, IsInterface: false, IsGenericTypeDefinition: false }
+                    && (typeof(IRequestHandler).IsAssignableFrom(t)
+                        || typeof(ICommandHandler).IsAssignableFrom(t)
+                        || typeof(INotificationHandler).IsAssignableFrom(t))
+                    && (filter == null || filter(t)));
+
+            foreach (var handlerType in handlerTypes)
             {
-                services.AddScoped(handler, sp => sp.GetRequiredService<THandler>());
+                if (typeof(IRequestHandler).IsAssignableFrom(handlerType))
+                    RegisterRequestHandlerCore(services, handlerType);
+
+                if (typeof(ICommandHandler).IsAssignableFrom(handlerType))
+                    RegisterCommandHandlerCore(services, handlerType);
+
+                if (typeof(INotificationHandler).IsAssignableFrom(handlerType))
+                    RegisterNotificationHandlerCore(services, handlerType);
             }
 
             return services;
+        }
+
+        public IServiceCollection AddHandlersFromAssemblyContaining<T>(Func<Type, bool>? filter = null)
+            => services.AddHandlersFromAssembly(typeof(T).Assembly, filter);
+    }
+
+    private static void RegisterRequestHandlerCore(IServiceCollection services, Type handlerType)
+    {
+        foreach (var handler in handlerType.GetInterfaces()
+                     .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IRequestHandler<,>)))
+        {
+            var requestType = handler.GetGenericArguments()[0];
+            if (services.Any(d => d.ServiceType == handler))
+                throw new DuplicateHandlerException(requestType);
+
+            services.AddScoped(handler, sp => sp.GetRequiredService(handlerType));
+        }
+
+        services.AddScoped(handlerType);
+        services.AddScoped(typeof(IRequestHandler), sp => sp.GetRequiredService(handlerType));
+    }
+
+    private static void RegisterCommandHandlerCore(IServiceCollection services, Type handlerType)
+    {
+        foreach (var handler in handlerType.GetInterfaces()
+                     .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICommandHandler<,>)))
+        {
+            var commandType = handler.GetGenericArguments()[0];
+            if (services.Any(d => d.ServiceType == handler))
+                throw new DuplicateHandlerException(commandType);
+
+            services.AddScoped(handler, sp => sp.GetRequiredService(handlerType));
+        }
+
+        foreach (var handler in handlerType.GetInterfaces()
+                     .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICommandHandler<>)))
+        {
+            var commandType = handler.GetGenericArguments()[0];
+            if (services.Any(d => d.ServiceType == handler))
+                throw new DuplicateHandlerException(commandType);
+
+            services.AddScoped(handler, sp => sp.GetRequiredService(handlerType));
+        }
+
+        services.AddScoped(handlerType);
+        services.AddScoped(typeof(ICommandHandler), sp => sp.GetRequiredService(handlerType));
+    }
+
+    private static void RegisterNotificationHandlerCore(IServiceCollection services, Type handlerType)
+    {
+        services.AddScoped(handlerType);
+        services.AddScoped(typeof(INotificationHandler), sp => sp.GetRequiredService(handlerType));
+
+        foreach (var handler in handlerType.GetInterfaces()
+                     .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(INotificationHandler<>)))
+        {
+            services.AddScoped(handler, sp => sp.GetRequiredService(handlerType));
         }
     }
 }

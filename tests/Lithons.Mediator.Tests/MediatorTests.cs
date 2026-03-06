@@ -1,6 +1,7 @@
 using Lithons.Mediator.Abstractions.Contracts;
 using Lithons.Mediator.Abstractions.Middleware.Command;
 using Lithons.Mediator.Exceptions;
+using Lithons.Mediator.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -26,13 +27,13 @@ public class MediatorTests
 
     private class EchoRequestHandler : IRequestHandler<EchoRequest, string>
     {
-        public Task<string> HandleAsync(EchoRequest request, CancellationToken cancellationToken)
+        public Task<string> Handle(EchoRequest request, CancellationToken cancellationToken)
             => Task.FromResult(request.Value);
     }
 
     private class EchoRequestHandlerDuplicate : IRequestHandler<EchoRequest, string>
     {
-        public Task<string> HandleAsync(EchoRequest request, CancellationToken cancellationToken)
+        public Task<string> Handle(EchoRequest request, CancellationToken cancellationToken)
             => Task.FromResult(request.Value);
     }
 
@@ -78,7 +79,7 @@ public class MediatorTests
 
     private class AddCommandHandler : ICommandHandler<AddCommand, int>
     {
-        public Task<int> HandleAsync(AddCommand command, CancellationToken cancellationToken)
+        public Task<int> Handle(AddCommand command, CancellationToken cancellationToken)
             => Task.FromResult(command.A + command.B);
     }
 
@@ -109,7 +110,7 @@ public class MediatorTests
     {
         public bool Called { get; private set; }
 
-        public Task HandleAsync(PingCommand command, CancellationToken cancellationToken)
+        public Task Handle(PingCommand command, CancellationToken cancellationToken)
         {
             Called = true;
             return Task.CompletedTask;
@@ -149,7 +150,7 @@ public class MediatorTests
     {
         public List<int> Received { get; } = [];
 
-        public Task HandleAsync(OrderPlacedNotification notification, CancellationToken cancellationToken)
+        public Task Handle(OrderPlacedNotification notification, CancellationToken cancellationToken)
         {
             Received.Add(notification.OrderId);
             return Task.CompletedTask;
@@ -160,7 +161,7 @@ public class MediatorTests
     {
         public bool Called { get; private set; }
 
-        public Task HandleAsync(OrderPlacedNotification notification, CancellationToken cancellationToken)
+        public Task Handle(OrderPlacedNotification notification, CancellationToken cancellationToken)
         {
             Called = true;
             return Task.CompletedTask;
@@ -246,7 +247,7 @@ public class MediatorTests
 
     private class TokenRequestHandler : IRequestHandler<TokenRequest, CancellationToken>
     {
-        public Task<CancellationToken> HandleAsync(TokenRequest request, CancellationToken cancellationToken)
+        public Task<CancellationToken> Handle(TokenRequest request, CancellationToken cancellationToken)
             => Task.FromResult(cancellationToken);
     }
 
@@ -266,7 +267,7 @@ public class MediatorTests
 
     private class TokenCommandHandler : ICommandHandler<TokenCommand, CancellationToken>
     {
-        public Task<CancellationToken> HandleAsync(TokenCommand command, CancellationToken cancellationToken)
+        public Task<CancellationToken> Handle(TokenCommand command, CancellationToken cancellationToken)
             => Task.FromResult(cancellationToken);
     }
 
@@ -284,6 +285,148 @@ public class MediatorTests
 
     #endregion
 
+    #region Generics
+
+    private record GenericRequest<T>(T Value) : IRequest<T>;
+
+    private class GenericRequestHandler<T> : IRequestHandler<GenericRequest<T>, T>
+    {
+        public Task<T> Handle(GenericRequest<T> request, CancellationToken cancellationToken)
+            => Task.FromResult(request.Value);
+    }
+
+    [Fact]
+    public async Task SendAsync_GenericRequest_String_ReturnsCorrectResult()
+    {
+        using var scope = CreateScope(s => s.AddRequestHandler<GenericRequestHandler<string>>());
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
+        var result = await mediator.SendAsync(new GenericRequest<string>("hello"), TestContext.Current.CancellationToken);
+
+        Assert.Equal("hello", result);
+    }
+
+    [Fact]
+    public async Task SendAsync_GenericRequest_Int_ReturnsCorrectResult()
+    {
+        using var scope = CreateScope(s => s.AddRequestHandler<GenericRequestHandler<int>>());
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
+        var result = await mediator.SendAsync(new GenericRequest<int>(42), TestContext.Current.CancellationToken);
+
+        Assert.Equal(42, result);
+    }
+
+    [Fact]
+    public async Task SendAsync_GenericRequest_MultipleTypeArgs_RoutedToCorrectHandler()
+    {
+        using var scope = CreateScope(s =>
+        {
+            s.AddRequestHandler<GenericRequestHandler<string>>();
+            s.AddRequestHandler<GenericRequestHandler<int>>();
+        });
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
+        var stringResult = await mediator.SendAsync(new GenericRequest<string>("test"), TestContext.Current.CancellationToken);
+        var intResult = await mediator.SendAsync(new GenericRequest<int>(99), TestContext.Current.CancellationToken);
+
+        Assert.Equal("test", stringResult);
+        Assert.Equal(99, intResult);
+    }
+
+    private record GenericCommand<T>(T Value) : ICommand<T>;
+
+    private class GenericCommandHandler<T> : ICommandHandler<GenericCommand<T>, T>
+    {
+        public Task<T> Handle(GenericCommand<T> command, CancellationToken cancellationToken)
+            => Task.FromResult(command.Value);
+    }
+
+    [Fact]
+    public async Task SendAsync_GenericCommand_String_ReturnsCorrectResult()
+    {
+        using var scope = CreateScope(s => s.AddCommandHandler<GenericCommandHandler<string>>());
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
+        var result = await mediator.SendAsync(new GenericCommand<string>("world"), TestContext.Current.CancellationToken);
+
+        Assert.Equal("world", result);
+    }
+
+    [Fact]
+    public async Task SendAsync_GenericCommand_Int_ReturnsCorrectResult()
+    {
+        using var scope = CreateScope(s => s.AddCommandHandler<GenericCommandHandler<int>>());
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
+        var result = await mediator.SendAsync(new GenericCommand<int>(7), TestContext.Current.CancellationToken);
+
+        Assert.Equal(7, result);
+    }
+
+    [Fact]
+    public async Task SendAsync_GenericCommand_MultipleTypeArgs_RoutedToCorrectHandler()
+    {
+        using var scope = CreateScope(s =>
+        {
+            s.AddCommandHandler<GenericCommandHandler<string>>();
+            s.AddCommandHandler<GenericCommandHandler<int>>();
+        });
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
+        var stringResult = await mediator.SendAsync(new GenericCommand<string>("abc"), TestContext.Current.CancellationToken);
+        var intResult = await mediator.SendAsync(new GenericCommand<int>(5), TestContext.Current.CancellationToken);
+
+        Assert.Equal("abc", stringResult);
+        Assert.Equal(5, intResult);
+    }
+
+    private record GenericNotification<T>(T Payload) : INotification;
+
+    private class GenericNotificationHandler<T> : INotificationHandler<GenericNotification<T>>
+    {
+        public List<T> Received { get; } = [];
+
+        public Task Handle(GenericNotification<T> notification, CancellationToken cancellationToken)
+        {
+            Received.Add(notification.Payload);
+            return Task.CompletedTask;
+        }
+    }
+
+    [Fact]
+    public async Task SendAsync_GenericNotification_String_InvokesHandler()
+    {
+        var handler = new GenericNotificationHandler<string>();
+        using var scope = CreateScope(s => s.AddSingleton<INotificationHandler<GenericNotification<string>>>(handler));
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
+        await mediator.SendAsync(new GenericNotification<string>("event"), TestContext.Current.CancellationToken);
+
+        Assert.Equal(["event"], handler.Received);
+    }
+
+    [Fact]
+    public async Task SendAsync_GenericNotification_MultipleTypeArgs_RoutedToCorrectHandler()
+    {
+        var stringHandler = new GenericNotificationHandler<string>();
+        var intHandler = new GenericNotificationHandler<int>();
+        using var scope = CreateScope(s =>
+        {
+            s.AddSingleton<INotificationHandler<GenericNotification<string>>>(stringHandler);
+            s.AddSingleton<INotificationHandler<GenericNotification<int>>>(intHandler);
+        });
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
+        await mediator.SendAsync(new GenericNotification<string>("hello"), TestContext.Current.CancellationToken);
+        await mediator.SendAsync(new GenericNotification<int>(42), TestContext.Current.CancellationToken);
+
+        Assert.Equal(["hello"], stringHandler.Received);
+        Assert.Equal([42], intHandler.Received);
+    }
+
+    #endregion
+
     #region BackgroundStrategy
 
     private class InMemoryCommandsChannel : ICommandsChannel
@@ -297,7 +440,7 @@ public class MediatorTests
 
     private class BackgroundCommandHandler : ICommandHandler<BackgroundCommand, int>
     {
-        public Task<int> HandleAsync(BackgroundCommand command, CancellationToken cancellationToken)
+        public Task<int> Handle(BackgroundCommand command, CancellationToken cancellationToken)
             => Task.FromResult(command.Value);
     }
 

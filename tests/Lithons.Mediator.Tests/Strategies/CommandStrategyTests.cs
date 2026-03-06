@@ -11,7 +11,7 @@ public class CommandStrategyTests
 
     private class SumCommandHandler : ICommandHandler<SumCommand, int>
     {
-        public Task<int> HandleAsync(SumCommand command, CancellationToken cancellationToken)
+        public Task<int> Handle(SumCommand command, CancellationToken cancellationToken)
             => Task.FromResult(command.A + command.B);
     }
 
@@ -21,7 +21,7 @@ public class CommandStrategyTests
     {
         public bool Called { get; private set; }
 
-        public Task HandleAsync(VoidCommand command, CancellationToken cancellationToken)
+        public Task Handle(VoidCommand command, CancellationToken cancellationToken)
         {
             Called = true;
             return Task.CompletedTask;

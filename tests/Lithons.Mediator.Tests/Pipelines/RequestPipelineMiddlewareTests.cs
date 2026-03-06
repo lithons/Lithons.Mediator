@@ -2,6 +2,7 @@ using Lithons.Mediator.Abstractions.Contracts;
 using Lithons.Mediator.Abstractions.Middleware.Command.Contracts;
 using Lithons.Mediator.Abstractions.Middleware.Notification.Contracts;
 using Lithons.Mediator.Abstractions.Middleware.Request.Contracts;
+using Lithons.Mediator.Extensions;
 using Lithons.Mediator.Middleware.Command;
 using Lithons.Mediator.Middleware.Notification;
 using Lithons.Mediator.Middleware.Request;
@@ -16,7 +17,7 @@ public class RequestPipelineMiddlewareTests
     private record EchoRequest(string Value) : IRequest<string>;
     private class EchoRequestHandler : IRequestHandler<EchoRequest, string>
     {
-        public Task<string> HandleAsync(EchoRequest request, CancellationToken cancellationToken)
+        public Task<string> Handle(EchoRequest request, CancellationToken cancellationToken)
             => Task.FromResult(request.Value);
     }
 
@@ -108,7 +109,7 @@ public class RequestPipelineMiddlewareTests
     private record PingCommand : ICommand;
     private class PingCommandHandler : ICommandHandler<PingCommand>
     {
-        public Task HandleAsync(PingCommand command, CancellationToken cancellationToken)
+        public Task Handle(PingCommand command, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
 
@@ -185,7 +186,7 @@ public class RequestPipelineMiddlewareTests
     private record TestNotification : INotification;
     private class TestNotificationHandler : INotificationHandler<TestNotification>
     {
-        public Task HandleAsync(TestNotification notification, CancellationToken cancellationToken)
+        public Task Handle(TestNotification notification, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
 
