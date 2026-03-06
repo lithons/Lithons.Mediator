@@ -1,4 +1,6 @@
+using Lithons.Mediator.Example.Blazor.Components;
 using Lithons.Mediator.Example.Blazor.Handlers;
+using Lithons.Mediator.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 

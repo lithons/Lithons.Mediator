@@ -1,4 +1,6 @@
-﻿namespace Lithons.Mediator.Example.Blazor.Handlers;
+﻿using Lithons.Mediator.Abstractions.Contracts;
+
+namespace Lithons.Mediator.Example.Blazor.Handlers;
 
 public record StringReverseRequest(string Value) : IRequest<string>;
 public class StringReverseHandler : IRequestHandler<StringReverseRequest, string>

@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\Lithons.Mediator\Lithons.Mediator.csproj" />
+    <ProjectReference Include="..\Lithons.Mediator\Lithons.Mediator.csproj" />
   </ItemGroup>
 
 </Project>
