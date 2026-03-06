@@ -7,7 +7,7 @@ using Lithons.Mediator.Exceptions;
 using Lithons.Mediator.Extensions;
 using Lithons.Mediator.NotificationStrategies;
 using Lithons.Mediator.Options;
-using Lithons.Mediator.Tests.Handlers;
+using Lithons.Mediator.Tests.ScanHandlers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;

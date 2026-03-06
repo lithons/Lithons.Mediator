@@ -1,6 +1,6 @@
 using Lithons.Mediator.Abstractions.Contracts;
 
-namespace Lithons.Mediator.Tests.Handlers;
+namespace Lithons.Mediator.Tests.ScanHandlers;
 
 internal record ScanRequest(string Value) : IRequest<string>;
 
