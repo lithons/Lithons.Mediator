@@ -16,7 +16,7 @@ public class RequestPipelineMiddlewareTests
     private record EchoRequest(string Value) : IRequest<string>;
     private class EchoRequestHandler : IRequestHandler<EchoRequest, string>
     {
-        public Task<string> HandleAsync(EchoRequest request, CancellationToken cancellationToken)
+        public Task<string> Handle(EchoRequest request, CancellationToken cancellationToken)
             => Task.FromResult(request.Value);
     }
 

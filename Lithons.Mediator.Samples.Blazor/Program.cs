@@ -1,5 +1,4 @@
 using Lithons.Mediator.Samples.Blazor.Components;
-using Lithons.Mediator.Samples.Blazor.Handlers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,8 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddMediator();
-builder.Services.AddRequestHandler<StringReverseHandler>();
+builder.Services.AddMediator(cfg => cfg.AddHandlersFromAssembly<Program>());
 
 var app = builder.Build();
 

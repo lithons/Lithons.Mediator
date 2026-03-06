@@ -13,7 +13,7 @@ public class MediatorBenchmarks
 
     private class EchoRequestHandler : IRequestHandler<EchoRequest, string>
     {
-        public Task<string> HandleAsync(EchoRequest request, CancellationToken cancellationToken)
+        public Task<string> Handle(EchoRequest request, CancellationToken cancellationToken)
             => Task.FromResult(request.Value);
     }
 

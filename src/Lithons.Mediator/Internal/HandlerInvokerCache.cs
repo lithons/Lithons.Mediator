@@ -19,7 +19,7 @@ internal static class HandlerInvokerCache
         {
             var (rqType, rsType) = key;
             var handlerType = typeof(IRequestHandler<,>).MakeGenericType(rqType, rsType);
-            var method = handlerType.GetMethod(nameof(IRequestHandler<,>.HandleAsync))!;
+            var method = handlerType.GetMethod(nameof(IRequestHandler<,>.Handle))!;
 
             var handlerParam = Expression.Parameter(typeof(object), "h");
             var requestParam = Expression.Parameter(typeof(object), "r");
