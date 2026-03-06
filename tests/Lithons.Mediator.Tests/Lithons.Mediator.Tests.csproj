@@ -27,4 +27,8 @@
     <Using Include="NSubstitute" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Internal\" />
+  </ItemGroup>
+
 </Project>

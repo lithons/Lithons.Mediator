@@ -59,7 +59,7 @@ public record GetUserById(int Id) : IRequest<UserDto>;
 // Handle
 public class GetUserByIdHandler : IRequestHandler<GetUserById, UserDto>
 {
-    public async Task<UserDto> HandleAsync(GetUserById request, CancellationToken cancellationToken)
+    public async Task<UserDto> Handle(GetUserById request, CancellationToken cancellationToken)
     {
         // ...
         return new UserDto(request.Id, "Alice");
@@ -85,7 +85,7 @@ public record DeleteUser(int Id) : ICommand;
 // Handle
 public class DeleteUserHandler : ICommandHandler<DeleteUser>
 {
-    public async Task HandleAsync(DeleteUser command, CancellationToken cancellationToken)
+    public async Task Handle(DeleteUser command, CancellationToken cancellationToken)
     {
         // ...
     }
@@ -104,7 +104,7 @@ public record CreateUser(string Name) : ICommand<int>;
 // Handle
 public class CreateUserHandler : ICommandHandler<CreateUser, int>
 {
-    public async Task<int> HandleAsync(CreateUser command, CancellationToken cancellationToken)
+    public async Task<int> Handle(CreateUser command, CancellationToken cancellationToken)
     {
         // ...
         return newUserId;
@@ -151,7 +151,7 @@ public record UserCreated(int UserId) : INotification;
 // Handle (register as many handlers as you need)
 public class SendWelcomeEmailHandler : INotificationHandler<UserCreated>
 {
-    public async Task HandleAsync(UserCreated notification, CancellationToken cancellationToken)
+    public async Task Handle(UserCreated notification, CancellationToken cancellationToken)
     {
         // send email...
     }
@@ -159,7 +159,7 @@ public class SendWelcomeEmailHandler : INotificationHandler<UserCreated>
 
 public class AuditLogHandler : INotificationHandler<UserCreated>
 {
-    public async Task HandleAsync(UserCreated notification, CancellationToken cancellationToken)
+    public async Task Handle(UserCreated notification, CancellationToken cancellationToken)
     {
         // write audit log...
     }

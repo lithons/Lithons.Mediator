@@ -4,6 +4,7 @@ using Lithons.Mediator.Abstractions.Middleware.Notification.Contracts;
 using Lithons.Mediator.Abstractions.Middleware.Request.Contracts;
 using Lithons.Mediator.CommandStrategies;
 using Lithons.Mediator.Exceptions;
+using Lithons.Mediator.Extensions;
 using Lithons.Mediator.NotificationStrategies;
 using Lithons.Mediator.Options;
 using Lithons.Mediator.Tests.Handlers;
@@ -132,7 +133,7 @@ public class ServiceCollectionExtensionsTests
     private record SomeCommand(int Value) : ICommand<int>;
     private class SomeCommandHandler : ICommandHandler<SomeCommand, int>
     {
-        public Task<int> HandleAsync(SomeCommand command, CancellationToken cancellationToken)
+        public Task<int> Handle(SomeCommand command, CancellationToken cancellationToken)
             => Task.FromResult(command.Value);
     }
 
@@ -150,7 +151,7 @@ public class ServiceCollectionExtensionsTests
     private record SomeNotification : INotification;
     private class SomeNotificationHandler : INotificationHandler<SomeNotification>
     {
-        public Task HandleAsync(SomeNotification notification, CancellationToken cancellationToken)
+        public Task Handle(SomeNotification notification, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
 
@@ -225,7 +226,7 @@ public class ServiceCollectionExtensionsTests
 
     private class DuplicateSomeCommandHandler : ICommandHandler<SomeCommand, int>
     {
-        public Task<int> HandleAsync(SomeCommand command, CancellationToken cancellationToken)
+        public Task<int> Handle(SomeCommand command, CancellationToken cancellationToken)
             => Task.FromResult(command.Value);
     }
 

@@ -1,4 +1,5 @@
 using Lithons.Mediator.Abstractions.Contracts;
+using Lithons.Mediator.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 

@@ -7,11 +7,11 @@ using Lithons.Mediator.Middleware.Command;
 using Lithons.Mediator.Middleware.Notification;
 using Lithons.Mediator.Middleware.Request;
 using Lithons.Mediator.Options;
-using Lithons.Mediator.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Reflection;
 
-namespace Microsoft.Extensions.DependencyInjection;
+namespace Lithons.Mediator.Extensions;
 
 public static class MediatorServiceCollectionExtensions
 {
@@ -28,7 +28,7 @@ public static class MediatorServiceCollectionExtensions
                 opts.DefaultCommandStrategy = config.DefaultCommandStrategy;
             });
 
-            services.TryAddScoped<IMediator, Mediator>();
+            services.TryAddScoped<IMediator, Services.Mediator>();
             services.TryAddScoped<IRequestSender>(sp => sp.GetRequiredService<IMediator>());
             services.TryAddScoped<ICommandSender>(sp => sp.GetRequiredService<IMediator>());
             services.TryAddScoped<INotificationSender>(sp => sp.GetRequiredService<IMediator>());

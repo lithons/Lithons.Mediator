@@ -3,6 +3,7 @@
     <Project Path="Lithons.Mediator.Samples.Blazor/Lithons.Mediator.Samples.Blazor.csproj" Id="6056964d-ef65-4ef2-9ac5-15b700fc119c" />
   </Folder>
   <Folder Name="/solution/">
+    <File Path=".editorconfig" />
     <File Path="Directory.Packages.props" />
     <File Path="README.md" />
   </Folder>

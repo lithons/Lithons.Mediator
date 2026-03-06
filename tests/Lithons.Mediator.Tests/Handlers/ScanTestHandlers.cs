@@ -14,7 +14,7 @@ internal record ScanNotification : INotification;
 
 internal class ScanNotificationHandler : INotificationHandler<ScanNotification>
 {
-    public Task HandleAsync(ScanNotification notification, CancellationToken cancellationToken)
+    public Task Handle(ScanNotification notification, CancellationToken cancellationToken)
         => Task.CompletedTask;
 }
 
@@ -22,6 +22,6 @@ internal record ScanCommand(int A, int B) : ICommand<int>;
 
 internal class ScanCommandHandler : ICommandHandler<ScanCommand, int>
 {
-    public Task<int> HandleAsync(ScanCommand command, CancellationToken cancellationToken)
+    public Task<int> Handle(ScanCommand command, CancellationToken cancellationToken)
         => Task.FromResult(command.A + command.B);
 }

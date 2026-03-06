@@ -41,7 +41,7 @@ internal static class HandlerInvokerCache
         {
             var (cType, rType) = key;
             var handlerType = typeof(ICommandHandler<,>).MakeGenericType(cType, rType);
-            var method = handlerType.GetMethod(nameof(ICommandHandler<,>.HandleAsync))!;
+            var method = handlerType.GetMethod(nameof(ICommandHandler<,>.Handle))!;
 
             var handlerParam = Expression.Parameter(typeof(object), "h");
             var commandParam = Expression.Parameter(typeof(object), "c");
@@ -62,7 +62,7 @@ internal static class HandlerInvokerCache
         => _voidCommandInvokers.GetOrAdd(commandType, static cType =>
         {
             var handlerType = typeof(ICommandHandler<>).MakeGenericType(cType);
-            var method = handlerType.GetMethod("HandleAsync")!;
+            var method = handlerType.GetMethod(nameof(ICommandHandler<>.Handle))!;
 
             var handlerParam = Expression.Parameter(typeof(object), "h");
             var commandParam = Expression.Parameter(typeof(object), "c");
@@ -82,7 +82,7 @@ internal static class HandlerInvokerCache
         => _notificationInvokers.GetOrAdd(notificationType, static nType =>
         {
             var handlerType = typeof(INotificationHandler<>).MakeGenericType(nType);
-            var method = handlerType.GetMethod(nameof(INotificationHandler<>.HandleAsync))!;
+            var method = handlerType.GetMethod(nameof(INotificationHandler<>.Handle))!;
 
             var handlerParam = Expression.Parameter(typeof(object), "h");
             var notifParam = Expression.Parameter(typeof(object), "n");

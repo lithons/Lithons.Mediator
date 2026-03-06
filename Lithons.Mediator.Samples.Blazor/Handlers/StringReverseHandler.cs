@@ -7,7 +7,7 @@ public class StringReverseHandler : IRequestHandler<StringReverseRequest, string
 {
     public Task<string> Handle(StringReverseRequest request, CancellationToken cancellationToken)
     {
-        var reversed = new string(request.Value.Reverse().ToArray());
+        var reversed = new string([.. request.Value.Reverse()]);
         return Task.FromResult(reversed);
     }
 }

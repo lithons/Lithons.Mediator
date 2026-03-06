@@ -1,6 +1,7 @@
 using Lithons.Mediator.Abstractions.Contracts;
 using Lithons.Mediator.Abstractions.Middleware.Command;
 using Lithons.Mediator.Exceptions;
+using Lithons.Mediator.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -78,7 +79,7 @@ public class MediatorTests
 
     private class AddCommandHandler : ICommandHandler<AddCommand, int>
     {
-        public Task<int> HandleAsync(AddCommand command, CancellationToken cancellationToken)
+        public Task<int> Handle(AddCommand command, CancellationToken cancellationToken)
             => Task.FromResult(command.A + command.B);
     }
 
@@ -109,7 +110,7 @@ public class MediatorTests
     {
         public bool Called { get; private set; }
 
-        public Task HandleAsync(PingCommand command, CancellationToken cancellationToken)
+        public Task Handle(PingCommand command, CancellationToken cancellationToken)
         {
             Called = true;
             return Task.CompletedTask;
@@ -149,7 +150,7 @@ public class MediatorTests
     {
         public List<int> Received { get; } = [];
 
-        public Task HandleAsync(OrderPlacedNotification notification, CancellationToken cancellationToken)
+        public Task Handle(OrderPlacedNotification notification, CancellationToken cancellationToken)
         {
             Received.Add(notification.OrderId);
             return Task.CompletedTask;
@@ -160,7 +161,7 @@ public class MediatorTests
     {
         public bool Called { get; private set; }
 
-        public Task HandleAsync(OrderPlacedNotification notification, CancellationToken cancellationToken)
+        public Task Handle(OrderPlacedNotification notification, CancellationToken cancellationToken)
         {
             Called = true;
             return Task.CompletedTask;
@@ -266,7 +267,7 @@ public class MediatorTests
 
     private class TokenCommandHandler : ICommandHandler<TokenCommand, CancellationToken>
     {
-        public Task<CancellationToken> HandleAsync(TokenCommand command, CancellationToken cancellationToken)
+        public Task<CancellationToken> Handle(TokenCommand command, CancellationToken cancellationToken)
             => Task.FromResult(cancellationToken);
     }
 
@@ -337,7 +338,7 @@ public class MediatorTests
 
     private class GenericCommandHandler<T> : ICommandHandler<GenericCommand<T>, T>
     {
-        public Task<T> HandleAsync(GenericCommand<T> command, CancellationToken cancellationToken)
+        public Task<T> Handle(GenericCommand<T> command, CancellationToken cancellationToken)
             => Task.FromResult(command.Value);
     }
 
@@ -386,7 +387,7 @@ public class MediatorTests
     {
         public List<T> Received { get; } = [];
 
-        public Task HandleAsync(GenericNotification<T> notification, CancellationToken cancellationToken)
+        public Task Handle(GenericNotification<T> notification, CancellationToken cancellationToken)
         {
             Received.Add(notification.Payload);
             return Task.CompletedTask;
@@ -439,7 +440,7 @@ public class MediatorTests
 
     private class BackgroundCommandHandler : ICommandHandler<BackgroundCommand, int>
     {
-        public Task<int> HandleAsync(BackgroundCommand command, CancellationToken cancellationToken)
+        public Task<int> Handle(BackgroundCommand command, CancellationToken cancellationToken)
             => Task.FromResult(command.Value);
     }
 

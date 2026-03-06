@@ -1,5 +1,6 @@
 using BenchmarkDotNet.Attributes;
 using Lithons.Mediator.Abstractions.Contracts;
+using Lithons.Mediator.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -21,7 +22,7 @@ public class MediatorBenchmarks
 
     private class AddCommandHandler : ICommandHandler<AddCommand, int>
     {
-        public Task<int> HandleAsync(AddCommand command, CancellationToken cancellationToken)
+        public Task<int> Handle(AddCommand command, CancellationToken cancellationToken)
             => Task.FromResult(command.A + command.B);
     }
 
@@ -29,7 +30,7 @@ public class MediatorBenchmarks
 
     private class PingCommandHandler : ICommandHandler<PingCommand>
     {
-        public Task HandleAsync(PingCommand command, CancellationToken cancellationToken)
+        public Task Handle(PingCommand command, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
 
@@ -37,13 +38,13 @@ public class MediatorBenchmarks
 
     private class OrderHandler1 : INotificationHandler<OrderPlacedNotification>
     {
-        public Task HandleAsync(OrderPlacedNotification notification, CancellationToken cancellationToken)
+        public Task Handle(OrderPlacedNotification notification, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
 
     private class OrderHandler2 : INotificationHandler<OrderPlacedNotification>
     {
-        public Task HandleAsync(OrderPlacedNotification notification, CancellationToken cancellationToken)
+        public Task Handle(OrderPlacedNotification notification, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
 
