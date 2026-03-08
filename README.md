@@ -39,6 +39,16 @@ builder.Services.AddMediator(cfg =>
 
 You can pass an `Assembly` directly or supply a filter:
 
+Inject `IMediator` (or the narrower `IRequestSender`, `ICommandSender`, `INotificationSender`) wherever you need to send messages.
+
+---
+
+## Handler registration
+
+### Automatic discovery (recommended)
+
+Scan an entire assembly for handlers. Open generic type definitions and abstract classes are skipped automatically.
+
 ```csharp
 cfg.AddHandlersFromAssembly(typeof(Program).Assembly);
 cfg.AddHandlersFromAssembly<Program>(type => type.Namespace?.StartsWith("MyApp.Handlers") == true);
@@ -75,6 +85,7 @@ Trigger a side effect. Commands can optionally return a result.
 ```csharp
 // Without a result
 public record DeleteUser(int Id) : ICommand;
+public class DeleteUserHandler : ICommandHandler<DeleteUser> { /* ... */ }
 
 public class DeleteUserHandler : ICommandHandler<DeleteUser>
 {
@@ -168,7 +179,7 @@ requestPipeline.Setup(builder =>
 **Typed middleware class:**
 
 ```csharp
-public class LoggingRequestMiddleware(RequestMiddlewareDelegate next) : IRequestMiddleware
+public class LoggingMiddleware(RequestMiddlewareDelegate next) : IRequestMiddleware
 {
     public async ValueTask InvokeAsync(RequestContext context)
     {
@@ -180,7 +191,7 @@ public class LoggingRequestMiddleware(RequestMiddlewareDelegate next) : IRequest
 
 requestPipeline.Setup(builder =>
 {
-    builder.UseMiddleware<LoggingRequestMiddleware>();
+    builder.UseMiddleware<LoggingMiddleware>();
     builder.UseRequestHandlers();
 });
 ```
