@@ -13,10 +13,18 @@ using System.Reflection;
 
 namespace Lithons.Mediator.Extensions;
 
+/// <summary>
+/// Extension methods for registering the mediator and its dependencies with <see cref="IServiceCollection"/>.
+/// </summary>
 public static class MediatorServiceCollectionExtensions
 {
     extension(IServiceCollection services)
     {
+        /// <summary>
+        /// Registers the mediator and all required services with the dependency injection container.
+        /// </summary>
+        /// <param name="configure">An optional action to configure handlers, strategies, and other mediator options.</param>
+        /// <returns>The <see cref="IServiceCollection"/> for chaining.</returns>
         public IServiceCollection AddMediator(Action<MediatorConfiguration>? configure = null)
         {
             var config = new MediatorConfiguration(services);

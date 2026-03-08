@@ -4,6 +4,9 @@ using Lithons.Mediator.Internal;
 
 namespace Lithons.Mediator.CommandStrategies;
 
+/// <summary>
+/// The default <see cref="ICommandStrategy"/> that executes commands synchronously within the current scope.
+/// </summary>
 public class DefaultStrategy : ICommandStrategy
 {
     public async Task<TResult> ExecuteAsync<TResult>(CommandStrategyContext context)

@@ -4,10 +4,19 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Lithons.Mediator.Middleware.Notification;
 
+/// <summary>
+/// Extension methods for adding middleware components to an <see cref="INotificationPipelineBuilder"/>.
+/// </summary>
 public static class NotificationMiddlewareExtensions
 {
     extension(INotificationPipelineBuilder builder)
     {
+        /// <summary>
+        /// Adds a strongly typed middleware component to the notification pipeline.
+        /// </summary>
+        /// <typeparam name="TMiddleware">The <see cref="INotificationMiddleware"/> type to add.</typeparam>
+        /// <param name="args">Additional constructor arguments for the middleware instance.</param>
+        /// <returns>The <see cref="INotificationPipelineBuilder"/> for chaining.</returns>
         public INotificationPipelineBuilder UseMiddleware<TMiddleware>(params object[] args) where TMiddleware : INotificationMiddleware
         {
             var middlewareType = typeof(TMiddleware);
@@ -27,6 +36,10 @@ public static class NotificationMiddlewareExtensions
             });
         }
 
+        /// <summary>
+        /// Adds the built-in notification handler invoker to the pipeline.
+        /// </summary>
+        /// <returns>The <see cref="INotificationPipelineBuilder"/> for chaining.</returns>
         public INotificationPipelineBuilder UseNotificationHandlers()
         {
             return builder.UseMiddleware<Components.NotificationHandlerInvokerMiddleware>();

@@ -1,0 +1,117 @@
+@page "/background-commands"
+@using Lithons.Mediator.Example.Blazor.Handlers
+@using Lithons.Mediator.Example.Blazor.Services
+@rendermode InteractiveServer
+@inject IMediator Mediator
+@inject AuditLog AuditLog
+
+<PageTitle>Background Commands</PageTitle>
+
+<h1>Background Commands Demo</h1>
+<p class="text-muted">
+    Demonstrates <code>CommandStrategy.Background</code> — commands are queued onto an
+    <code>ICommandsChannel</code> and processed by <code>CommandsBackgroundService</code>
+    in the background. The caller returns immediately.
+</p>
+
+<div class="card">
+    <div class="card-header">
+        <strong>Fire &amp; Forget Audit Log</strong>
+    </div>
+    <div class="card-body">
+        <p class="card-text">
+            Enter an action and detail. The command is dispatched with
+            <code>CommandStrategy.Background</code> — the UI returns instantly while the handler
+            simulates a 500 ms write in the background.
+        </p>
+
+        <div class="row g-2 mb-3">
+            <div class="col-md-4">
+                <input class="form-control" @bind="_action" placeholder="Action (e.g. UserLogin)" />
+            </div>
+            <div class="col-md-6">
+                <input class="form-control" @bind="_detail" placeholder="Detail (e.g. admin@example.com)" />
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100" @onclick="SendCommand">Send</button>
+            </div>
+        </div>
+
+        @if (_sentCount > 0)
+        {
+            <div class="alert alert-info mb-3">
+                Queued <strong>@_sentCount</strong> command(s) — returned instantly.
+                Click <strong>Refresh log</strong> to see background results.
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Audit log</strong> <span class="text-muted small">(populated by the background service)</span>
+        <div>
+            <button class="btn btn-sm btn-outline-primary me-1" @onclick="RefreshLog">Refresh log</button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="ClearLog">Clear</button>
+        </div>
+    </div>
+    <div class="card-body">
+        @if (_entries.Count == 0)
+        {
+            <p class="text-muted mb-0">No entries yet. Send a command and refresh after a moment.</p>
+        }
+        else
+        {
+            <table class="table table-sm table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Action</th>
+                        <th>Detail</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var entry in _entries)
+                    {
+                        <tr>
+                            <td>@entry.Timestamp.ToString("HH:mm:ss.fff")</td>
+                            <td>@entry.Action</td>
+                            <td>@entry.Detail</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@code {
+    private string _action = string.Empty;
+    private string _detail = string.Empty;
+    private int _sentCount;
+    private IReadOnlyList<AuditEntry> _entries = [];
+
+    private async Task SendCommand()
+    {
+        if (string.IsNullOrWhiteSpace(_action)) return;
+
+        await Mediator.SendAsync(
+            new AuditLogCommand(_action, _detail),
+            CommandStrategy.Background);
+
+        _sentCount++;
+        _action = string.Empty;
+        _detail = string.Empty;
+    }
+
+    private void RefreshLog()
+    {
+        _entries = AuditLog.Entries;
+    }
+
+    private void ClearLog()
+    {
+        AuditLog.Clear();
+        _entries = [];
+    }
+}

@@ -11,10 +11,12 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddScoped<IStringService, StringService>();
 builder.Services.AddScoped<ExceptionLog>();
+builder.Services.AddSingleton<AuditLog>();
 
 builder.Services.AddMediator(cfg =>
 {
     cfg.AddHandlersFromAssembly<Program>();
+    cfg.AddBackgroundCommandProcessing();
 });
 
 var app = builder.Build();
