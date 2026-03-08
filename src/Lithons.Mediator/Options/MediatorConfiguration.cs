@@ -28,4 +28,22 @@ public sealed class MediatorConfiguration
         _services.AddHandlersFromAssemblyContaining<T>(filter);
         return this;
     }
+
+    public MediatorConfiguration AddRequestHandler(Type handlerType)
+    {
+        _services.AddRequestHandler(handlerType);
+        return this;
+    }
+
+    public MediatorConfiguration AddCommandHandler(Type handlerType)
+    {
+        _services.AddCommandHandler(handlerType);
+        return this;
+    }
+
+    public MediatorConfiguration AddNotificationHandler(Type handlerType)
+    {
+        _services.AddNotificationHandler(handlerType);
+        return this;
+    }
 }
