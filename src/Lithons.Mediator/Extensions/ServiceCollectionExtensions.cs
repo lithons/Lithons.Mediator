@@ -149,6 +149,20 @@ public static class MediatorServiceCollectionExtensions
 
         public IServiceCollection AddHandlersFromAssemblyContaining<T>(Func<Type, bool>? filter = null)
             => services.AddHandlersFromAssembly(typeof(T).Assembly, filter);
+
+        public IServiceCollection AddExceptionHandler<THandler>()
+            where THandler : class, IExceptionHandler
+        {
+            services.TryAddScoped<IExceptionHandler, THandler>();
+            return services;
+        }
+
+        public IServiceCollection AddExceptionHandler<TMessage, THandler>()
+            where THandler : class, IExceptionHandler<TMessage>
+        {
+            services.TryAddScoped<IExceptionHandler<TMessage>, THandler>();
+            return services;
+        }
     }
 
     private static void RegisterRequestHandlerCore(IServiceCollection services, Type handlerType)

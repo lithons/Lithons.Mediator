@@ -242,3 +242,69 @@ requestPipeline.Setup(builder =>
 | `IRequestPipeline` | `IRequestMiddleware` | `RequestContext` |
 | `ICommandPipeline` | `ICommandMiddleware` | `CommandContext` |
 | `INotificationPipeline` | `INotificationMiddleware` | `NotificationContext` |
+
+---
+
+## Exception handling
+
+Register an exception handler to catch unhandled exceptions from any pipeline **without writing middleware**. Handlers return `true` to swallow the exception or `false` to let it propagate.
+
+### Typed exception handler
+
+Handle exceptions for a **specific message type**:
+
+```csharp
+public class GetUserByIdExceptionHandler : IExceptionHandler<GetUserById>
+{
+    public ValueTask<bool> Handle(Exception exception, GetUserById message, CancellationToken cancellationToken)
+    {
+        // log, wrap, or swallow
+        return ValueTask.FromResult(true); // handled — don't rethrow
+    }
+}
+```
+
+Register it:
+
+```csharp
+builder.Services.AddExceptionHandler<GetUserById, GetUserByIdExceptionHandler>();
+```
+
+### Global exception handler
+
+Handle exceptions for **all message types** as a catch-all:
+
+```csharp
+public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
+{
+    public ValueTask<bool> Handle(Exception exception, object message, CancellationToken cancellationToken)
+    {
+        logger.LogError(exception, "Unhandled exception for {MessageType}", message.GetType().Name);
+        return ValueTask.FromResult(false); // not handled — rethrow
+    }
+}
+```
+
+Register it:
+
+```csharp
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+```
+
+Or via `MediatorConfiguration`:
+
+```csharp
+builder.Services.AddMediator(cfg =>
+{
+    cfg.AddExceptionHandler<GlobalExceptionHandler>();
+    cfg.AddExceptionHandler<GetUserById, GetUserByIdExceptionHandler>();
+});
+```
+
+### Resolution order
+
+1. **Typed handler** — `IExceptionHandler<TMessage>` is tried first.
+2. **Global handler** — `IExceptionHandler` is tried if no typed handler handled the exception.
+3. **Rethrow** — if neither handler returns `true`, the original exception propagates.
+
+> `OperationCanceledException` is never caught by exception handlers.

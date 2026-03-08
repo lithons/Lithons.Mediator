@@ -1,0 +1,120 @@
+@page "/error-handling"
+@using Lithons.Mediator.Example.Blazor.Handlers
+@using Lithons.Mediator.Example.Blazor.Services
+@rendermode InteractiveServer
+@inject IMediator Mediator
+@inject ExceptionLog ExceptionLog
+
+<PageTitle>Exception Handling</PageTitle>
+
+<h1>Exception Handling Demo</h1>
+<p class="text-muted">
+    Demonstrates how <code>IExceptionHandler&lt;TMessage&gt;</code> and <code>IExceptionHandler</code>
+    catch pipeline errors without custom middleware.
+</p>
+
+<div class="row g-4">
+    @* ── Typed handler demo ── *@
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <strong>Typed handler</strong> — <code>IExceptionHandler&lt;DivideRequest&gt;</code>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    Enter two numbers. A <code>DivideByZeroException</code> is thrown when the
+                    denominator is <strong>0</strong>. The typed handler catches it and logs a message.
+                </p>
+                <div class="row g-2 mb-3">
+                    <div class="col">
+                        <input class="form-control" type="number" @bind="_numerator" placeholder="Numerator" />
+                    </div>
+                    <div class="col-auto d-flex align-items-center fw-bold">/</div>
+                    <div class="col">
+                        <input class="form-control" type="number" @bind="_denominator" placeholder="Denominator" />
+                    </div>
+                </div>
+                <button class="btn btn-primary" @onclick="Divide">Divide</button>
+
+                @if (_divideResult is not null)
+                {
+                    <div class="alert alert-success mt-3 mb-0">Result: <strong>@_divideResult</strong></div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @* ── Global handler demo ── *@
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <strong>Global handler</strong> — <code>IExceptionHandler</code>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    The string reverser throws a <code>NullReferenceException</code> when the input is
+                    <em>null</em>. No typed handler is registered for <code>StringReverseRequest</code>,
+                    so the <strong>global</strong> handler catches it.
+                </p>
+                <button class="btn btn-warning" @onclick="TriggerGlobalHandler">Reverse null string</button>
+
+                @if (_globalTriggered)
+                {
+                    <div class="alert alert-info mt-3 mb-0">Exception caught by the global handler — see log below.</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ── Exception log ── *@
+<div class="card mt-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Exception log</strong>
+        <button class="btn btn-sm btn-outline-secondary" @onclick="ClearLog">Clear</button>
+    </div>
+    <div class="card-body">
+        @if (ExceptionLog.Entries.Count == 0)
+        {
+            <p class="text-muted mb-0">No exceptions logged yet.</p>
+        }
+        else
+        {
+            <ul class="list-group list-group-flush">
+                @foreach (var entry in ExceptionLog.Entries)
+                {
+                    <li class="list-group-item font-monospace small">@entry</li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+@code {
+    private double _numerator = 10;
+    private double _denominator;
+    private double? _divideResult;
+    private bool _globalTriggered;
+
+    private async Task Divide()
+    {
+        _divideResult = null;
+        var result = await Mediator.SendAsync(new DivideRequest(_numerator, _denominator));
+        if (result != default)
+            _divideResult = result;
+    }
+
+    private async Task TriggerGlobalHandler()
+    {
+        _globalTriggered = false;
+        await Mediator.SendAsync(new StringReverseRequest(null!));
+        _globalTriggered = true;
+    }
+
+    private void ClearLog()
+    {
+        ExceptionLog.Clear();
+        _divideResult = null;
+        _globalTriggered = false;
+    }
+}

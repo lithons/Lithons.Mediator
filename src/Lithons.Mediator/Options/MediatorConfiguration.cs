@@ -46,4 +46,18 @@ public sealed class MediatorConfiguration
         _services.AddNotificationHandler(handlerType);
         return this;
     }
+
+    public MediatorConfiguration AddExceptionHandler<THandler>()
+        where THandler : class, IExceptionHandler
+    {
+        _services.AddExceptionHandler<THandler>();
+        return this;
+    }
+
+    public MediatorConfiguration AddExceptionHandler<TMessage, THandler>()
+        where THandler : class, IExceptionHandler<TMessage>
+    {
+        _services.AddExceptionHandler<TMessage, THandler>();
+        return this;
+    }
 }
