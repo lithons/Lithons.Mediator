@@ -35,7 +35,13 @@ public class ParallelStrategy : INotificationStrategy
         }
         catch
         {
-            throw whenAll.Exception!;
+            if (whenAll.Exception is not null)
+            {
+                throw whenAll.Exception;
+            }
+
+            // Re-await to surface TaskCanceledException / OperationCanceledException
+            await whenAll;
         }
     }
 }
