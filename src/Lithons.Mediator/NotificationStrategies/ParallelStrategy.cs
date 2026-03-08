@@ -4,6 +4,9 @@ using Lithons.Mediator.Internal;
 
 namespace Lithons.Mediator.NotificationStrategies;
 
+/// <summary>
+/// An <see cref="INotificationStrategy"/> that invokes all registered notification handlers concurrently.
+/// </summary>
 public class ParallelStrategy : INotificationStrategy
 {
     public async Task PublishAsync(NotificationStrategyContext context)

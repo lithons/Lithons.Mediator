@@ -122,6 +122,36 @@ builder.Services.AddMediator(options =>
 });
 ```
 
+#### Background command processing
+
+`CommandStrategy.Background` writes commands to an `ICommandsChannel`. Register the built-in processor to consume and execute them automatically:
+
+```csharp
+builder.Services.AddMediator(cfg =>
+{
+    cfg.AddBackgroundCommandProcessing();
+});
+```
+
+This registers a `DefaultCommandsChannel` (unbounded, single-reader) and a `CommandsBackgroundService` that:
+- Creates a new DI scope per command
+- Resolves and invokes the handler
+- Catches and logs failures per command (one poisoned command won't stop the processor)
+- Uses the host's `stoppingToken` for graceful shutdown
+
+For bounded backpressure, pass channel options:
+
+```csharp
+builder.Services.AddMediator(cfg =>
+{
+    cfg.AddBackgroundCommandProcessing(opts =>
+    {
+        opts.Capacity = 500;
+        opts.FullMode = BoundedChannelFullMode.Wait;
+    });
+});
+```
+
 ## Notifications
 
 Broadcast an event to zero or more independent handlers.

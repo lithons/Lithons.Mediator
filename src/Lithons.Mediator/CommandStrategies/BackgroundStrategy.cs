@@ -4,6 +4,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Lithons.Mediator.CommandStrategies;
 
+/// <summary>
+/// An <see cref="ICommandStrategy"/> that enqueues the command onto the background channel for deferred processing.
+/// </summary>
+/// <remarks>Requires background command processing to be registered via <c>AddBackgroundCommandProcessing</c>.
+/// Return values are not available when using this strategy.</remarks>
 public class BackgroundStrategy : ICommandStrategy
 {
     public async Task<TResult> ExecuteAsync<TResult>(CommandStrategyContext context)

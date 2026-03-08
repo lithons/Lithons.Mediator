@@ -4,10 +4,19 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Lithons.Mediator.Middleware.Command;
 
+/// <summary>
+/// Extension methods for adding middleware components to an <see cref="ICommandPipelineBuilder"/>.
+/// </summary>
 public static class CommandMiddlewareExtensions
 {
     extension(ICommandPipelineBuilder builder)
     {
+        /// <summary>
+        /// Adds a strongly typed middleware component to the command pipeline.
+        /// </summary>
+        /// <typeparam name="TMiddleware">The <see cref="ICommandMiddleware"/> type to add.</typeparam>
+        /// <param name="args">Additional constructor arguments for the middleware instance.</param>
+        /// <returns>The <see cref="ICommandPipelineBuilder"/> for chaining.</returns>
         public ICommandPipelineBuilder UseMiddleware<TMiddleware>(params object[] args) where TMiddleware : ICommandMiddleware
         {
             var middlewareType = typeof(TMiddleware);
@@ -27,6 +36,10 @@ public static class CommandMiddlewareExtensions
             });
         }
 
+        /// <summary>
+        /// Adds the built-in command handler invoker to the pipeline.
+        /// </summary>
+        /// <returns>The <see cref="ICommandPipelineBuilder"/> for chaining.</returns>
         public ICommandPipelineBuilder UseCommandHandlers()
         {
             return builder.UseMiddleware<Components.CommandHandlerInvokerMiddleware>();

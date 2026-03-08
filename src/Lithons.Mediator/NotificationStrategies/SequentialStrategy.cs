@@ -4,6 +4,9 @@ using Lithons.Mediator.Internal;
 
 namespace Lithons.Mediator.NotificationStrategies;
 
+/// <summary>
+/// An <see cref="INotificationStrategy"/> that invokes registered notification handlers one at a time, in registration order.
+/// </summary>
 public class SequentialStrategy : INotificationStrategy
 {
     public async Task PublishAsync(NotificationStrategyContext context)
