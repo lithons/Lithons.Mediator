@@ -116,6 +116,12 @@ public class NotificationStrategyTests
             => throw new InvalidOperationException("handler error");
     }
 
+    private class ThrowingHandlerWithMessage(string message) : INotificationHandler<TestNotification>
+    {
+        public Task Handle(TestNotification notification, CancellationToken cancellationToken)
+            => throw new InvalidOperationException(message);
+    }
+
     [Fact]
     public async Task SequentialStrategy_HandlerThrows_PropagatesException()
     {
@@ -141,14 +147,50 @@ public class NotificationStrategyTests
     }
 
     [Fact]
-    public async Task ParallelStrategy_HandlerThrows_PropagatesException()
+    public async Task ParallelStrategy_SingleHandlerThrows_WrapsInAggregateException()
     {
         var handler = new ThrowingHandler();
         var notification = new TestNotification("ping");
         var strategy = new ParallelStrategy();
         var context = BuildContext(notification, strategy, [handler], TestContext.Current.CancellationToken);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => strategy.PublishAsync(context));
+        var ex = await Assert.ThrowsAsync<AggregateException>(() => strategy.PublishAsync(context));
+
+        Assert.Single(ex.InnerExceptions);
+        Assert.IsType<InvalidOperationException>(ex.InnerExceptions[0]);
+    }
+
+    [Fact]
+    public async Task ParallelStrategy_MultipleHandlersThrow_AllExceptionsSurfaced()
+    {
+        var handler1 = new ThrowingHandlerWithMessage("error 1");
+        var handler2 = new ThrowingHandlerWithMessage("error 2");
+        var notification = new TestNotification("ping");
+        var strategy = new ParallelStrategy();
+        var context = BuildContext(notification, strategy, [handler1, handler2], TestContext.Current.CancellationToken);
+
+        var ex = await Assert.ThrowsAsync<AggregateException>(() => strategy.PublishAsync(context));
+
+        Assert.Equal(2, ex.InnerExceptions.Count);
+        Assert.All(ex.InnerExceptions, inner => Assert.IsType<InvalidOperationException>(inner));
+        Assert.Contains(ex.InnerExceptions, e => e.Message == "error 1");
+        Assert.Contains(ex.InnerExceptions, e => e.Message == "error 2");
+    }
+
+    [Fact]
+    public async Task ParallelStrategy_MultipleHandlersThrow_NonThrowingHandlersStillExecute()
+    {
+        var tracking = new TrackingHandler();
+        var handler1 = new ThrowingHandlerWithMessage("error 1");
+        var handler2 = new ThrowingHandlerWithMessage("error 2");
+        var notification = new TestNotification("ping");
+        var strategy = new ParallelStrategy();
+        var context = BuildContext(notification, strategy, [handler1, tracking, handler2], TestContext.Current.CancellationToken);
+
+        var ex = await Assert.ThrowsAsync<AggregateException>(() => strategy.PublishAsync(context));
+
+        Assert.Equal(2, ex.InnerExceptions.Count);
+        Assert.Equal(["ping"], tracking.Received);
     }
 
     [Fact]

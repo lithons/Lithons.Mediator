@@ -14,9 +14,28 @@ public class ParallelStrategy : INotificationStrategy
         var cancellationToken = context.NotificationContext.CancellationToken;
 
         var tasks = context.Handlers
-            .Select(h => invoker(h, notification, cancellationToken))
+            .Select(h =>
+            {
+                try
+                {
+                    return invoker(h, notification, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    return Task.FromException(ex);
+                }
+            })
             .ToList();
 
-        await Task.WhenAll(tasks);
+        var whenAll = Task.WhenAll(tasks);
+
+        try
+        {
+            await whenAll;
+        }
+        catch
+        {
+            throw whenAll.Exception!;
+        }
     }
 }
