@@ -1,5 +1,6 @@
 using Lithons.Mediator.Example.Blazor.Components;
 using Lithons.Mediator.Example.Blazor.Handlers;
+using Lithons.Mediator.Example.Blazor.Services;
 using Lithons.Mediator.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,7 +10,12 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddScoped<IStringService, StringService>();
-builder.Services.AddMediator(cfg => cfg.AddHandlersFromAssembly<Program>());
+builder.Services.AddScoped<ExceptionLog>();
+
+builder.Services.AddMediator(cfg =>
+{
+    cfg.AddHandlersFromAssembly<Program>();
+});
 
 var app = builder.Build();
 

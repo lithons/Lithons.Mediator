@@ -93,12 +93,14 @@ public class MediatorBenchmarks
         var services = new ServiceCollection();
         services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
-        services.AddMediator();
-        services.AddRequestHandler<EchoRequestHandler>();
-        services.AddCommandHandler<AddCommandHandler>();
-        services.AddCommandHandler<PingCommandHandler>();
-        services.AddNotificationHandler<OrderHandler1>();
-        services.AddNotificationHandler<OrderHandler2>();
+        services.AddMediator(cfg =>
+        {
+            cfg.AddRequestHandler<EchoRequestHandler>();
+            cfg.AddCommandHandler<AddCommandHandler>();
+            cfg.AddCommandHandler<PingCommandHandler>();
+            cfg.AddNotificationHandler<OrderHandler1>();
+            cfg.AddNotificationHandler<OrderHandler2>();
+        });
 
         var provider = services.BuildServiceProvider();
         _scope = provider.CreateScope();
@@ -108,12 +110,15 @@ public class MediatorBenchmarks
         var middlewareServices = new ServiceCollection();
         middlewareServices.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         middlewareServices.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
-        middlewareServices.AddMediator();
-        middlewareServices.AddRequestHandler<EchoRequestHandler>();
-        middlewareServices.AddCommandHandler<AddCommandHandler>();
-        middlewareServices.AddCommandHandler<PingCommandHandler>();
-        middlewareServices.AddNotificationHandler<OrderHandler1>();
-        middlewareServices.AddNotificationHandler<OrderHandler2>();
+        middlewareServices.AddMediator(cfg =>
+        {
+            cfg.AddRequestHandler<EchoRequestHandler>();
+            cfg.AddCommandHandler<AddCommandHandler>();
+            cfg.AddCommandHandler<PingCommandHandler>();
+            cfg.AddNotificationHandler<OrderHandler1>();
+            cfg.AddNotificationHandler<OrderHandler2>();
+        });
+
 
         var middlewareProvider = middlewareServices.BuildServiceProvider();
 
@@ -145,12 +150,15 @@ public class MediatorBenchmarks
         var manyServices = new ServiceCollection();
         manyServices.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         manyServices.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
-        manyServices.AddMediator();
-        manyServices.AddNotificationHandler<OrderHandler1>();
-        manyServices.AddNotificationHandler<OrderHandler2>();
-        manyServices.AddNotificationHandler<OrderHandler3>();
-        manyServices.AddNotificationHandler<OrderHandler4>();
-        manyServices.AddNotificationHandler<OrderHandler5>();
+        manyServices.AddMediator(cfg =>
+        {
+            cfg.AddNotificationHandler<OrderHandler1>();
+            cfg.AddNotificationHandler<OrderHandler2>();
+            cfg.AddNotificationHandler<OrderHandler3>();
+            cfg.AddNotificationHandler<OrderHandler4>();
+            cfg.AddNotificationHandler<OrderHandler5>();
+        });
+
 
         var manyProvider = manyServices.BuildServiceProvider();
         _manyHandlersScope = manyProvider.CreateScope();

@@ -6,6 +6,7 @@ using Lithons.Mediator.Extensions;
 using Lithons.Mediator.Middleware.Command;
 using Lithons.Mediator.Middleware.Notification;
 using Lithons.Mediator.Middleware.Request;
+using Lithons.Mediator.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -21,20 +22,19 @@ public class RequestPipelineMiddlewareTests
             => Task.FromResult(request.Value);
     }
 
-    private static ServiceProvider BuildServiceProvider(Action<IServiceCollection>? configure = null)
+    private static ServiceProvider BuildServiceProvider(Action<MediatorConfiguration>? configure = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
-        services.AddMediator();
-        configure?.Invoke(services);
+        services.AddMediator(configure);
         return services.BuildServiceProvider();
     }
 
     [Fact]
     public async Task RequestPipeline_CustomMiddleware_ExecutesBeforeHandler()
     {
-        var sp = BuildServiceProvider(s => s.AddRequestHandler<EchoRequestHandler>());
+        var sp = BuildServiceProvider(cfg => cfg.AddRequestHandler<EchoRequestHandler>());
         var pipeline = sp.GetRequiredService<IRequestPipeline>();
         var middlewareCalled = false;
 
@@ -58,7 +58,7 @@ public class RequestPipelineMiddlewareTests
     [Fact]
     public async Task RequestPipeline_MultipleMiddlewares_ExecuteInRegistrationOrder()
     {
-        var sp = BuildServiceProvider(s => s.AddRequestHandler<EchoRequestHandler>());
+        var sp = BuildServiceProvider(cfg => cfg.AddRequestHandler<EchoRequestHandler>());
         var pipeline = sp.GetRequiredService<IRequestPipeline>();
         var order = new List<int>();
 
@@ -79,7 +79,7 @@ public class RequestPipelineMiddlewareTests
     [Fact]
     public async Task RequestPipeline_MiddlewareCanShortCircuit_HandlerNotCalled()
     {
-        var sp = BuildServiceProvider(s => s.AddRequestHandler<EchoRequestHandler>());
+        var sp = BuildServiceProvider(cfg => cfg.AddRequestHandler<EchoRequestHandler>());
         var pipeline = sp.GetRequiredService<IRequestPipeline>();
         var handlerCalled = false;
 
@@ -116,7 +116,7 @@ public class RequestPipelineMiddlewareTests
     [Fact]
     public async Task CommandPipeline_CustomMiddleware_ExecutesBeforeHandler()
     {
-        var sp = BuildServiceProvider(s => s.AddCommandHandler<PingCommandHandler>());
+        var sp = BuildServiceProvider(cfg => cfg.AddCommandHandler<PingCommandHandler>());
         var pipeline = sp.GetRequiredService<ICommandPipeline>();
         var middlewareCalled = false;
 
@@ -140,7 +140,7 @@ public class RequestPipelineMiddlewareTests
     [Fact]
     public async Task CommandPipeline_MultipleMiddlewares_ExecuteInRegistrationOrder()
     {
-        var sp = BuildServiceProvider(s => s.AddCommandHandler<PingCommandHandler>());
+        var sp = BuildServiceProvider(cfg => cfg.AddCommandHandler<PingCommandHandler>());
         var pipeline = sp.GetRequiredService<ICommandPipeline>();
         var order = new List<int>();
 
@@ -161,7 +161,7 @@ public class RequestPipelineMiddlewareTests
     [Fact]
     public async Task CommandPipeline_MiddlewareCanShortCircuit_HandlerNotCalled()
     {
-        var sp = BuildServiceProvider(s => s.AddCommandHandler<PingCommandHandler>());
+        var sp = BuildServiceProvider(cfg => cfg.AddCommandHandler<PingCommandHandler>());
         var pipeline = sp.GetRequiredService<ICommandPipeline>();
         var handlerCalled = false;
 
@@ -193,7 +193,7 @@ public class RequestPipelineMiddlewareTests
     [Fact]
     public async Task NotificationPipeline_CustomMiddleware_ExecutesBeforeHandler()
     {
-        var sp = BuildServiceProvider(s => s.AddNotificationHandler<TestNotificationHandler>());
+        var sp = BuildServiceProvider(cfg => cfg.AddNotificationHandler<TestNotificationHandler>());
         var pipeline = sp.GetRequiredService<INotificationPipeline>();
         var middlewareCalled = false;
 
@@ -217,7 +217,7 @@ public class RequestPipelineMiddlewareTests
     [Fact]
     public async Task NotificationPipeline_MultipleMiddlewares_ExecuteInRegistrationOrder()
     {
-        var sp = BuildServiceProvider(s => s.AddNotificationHandler<TestNotificationHandler>());
+        var sp = BuildServiceProvider(cfg => cfg.AddNotificationHandler<TestNotificationHandler>());
         var pipeline = sp.GetRequiredService<INotificationPipeline>();
         var order = new List<int>();
 

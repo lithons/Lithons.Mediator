@@ -1,5 +1,6 @@
 using Lithons.Mediator.Abstractions.Contracts;
 using Lithons.Mediator.Extensions;
+using Lithons.Mediator.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -42,13 +43,12 @@ public class OpenGenericHandlerTests
             => Task.CompletedTask;
     }
 
-    private static IServiceScope CreateScope(Action<IServiceCollection> configure)
+    private static IServiceScope CreateScope(Action<MediatorConfiguration> configure)
     {
         var services = new ServiceCollection();
         services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
-        services.AddMediator();
-        configure(services);
+        services.AddMediator(configure);
         return services.BuildServiceProvider().CreateScope();
     }
 
@@ -57,8 +57,8 @@ public class OpenGenericHandlerTests
     [Fact]
     public async Task AddRequestHandler_OpenGeneric_ResolvesForAnyRequestType()
     {
-        using var scope = CreateScope(s =>
-            s.AddRequestHandler(typeof(CatchAllRequestHandler<,>)));
+        using var scope = CreateScope(cfg =>
+            cfg.AddRequestHandler(typeof(CatchAllRequestHandler<,>)));
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new GetById(1), TestContext.Current.CancellationToken);
@@ -69,14 +69,14 @@ public class OpenGenericHandlerTests
     public void AddRequestHandler_NonGenericType_Throws()
     {
         Assert.Throws<ArgumentException>(() =>
-            CreateScope(s => s.AddRequestHandler(typeof(string))));
+            CreateScope(cfg => cfg.AddRequestHandler(typeof(string))));
     }
 
     [Fact]
     public void AddRequestHandler_OpenGeneric_WrongInterface_Throws()
     {
         Assert.Throws<ArgumentException>(() =>
-            CreateScope(s => s.AddRequestHandler(typeof(CatchAllNotificationHandler<>))));
+            CreateScope(cfg => cfg.AddRequestHandler(typeof(CatchAllNotificationHandler<>))));
     }
 
     #endregion
@@ -86,8 +86,8 @@ public class OpenGenericHandlerTests
     [Fact]
     public async Task AddCommandHandler_OpenGeneric_Void_ResolvesForAnyCommandType()
     {
-        using var scope = CreateScope(s =>
-            s.AddCommandHandler(typeof(CatchAllCommandHandler<>)));
+        using var scope = CreateScope(cfg =>
+            cfg.AddCommandHandler(typeof(CatchAllCommandHandler<>)));
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new DoSomething("x"), TestContext.Current.CancellationToken);
@@ -96,8 +96,8 @@ public class OpenGenericHandlerTests
     [Fact]
     public async Task AddCommandHandler_OpenGeneric_WithResult_ResolvesForAnyCommandType()
     {
-        using var scope = CreateScope(s =>
-            s.AddCommandHandler(typeof(CatchAllCommandWithResultHandler<,>)));
+        using var scope = CreateScope(cfg =>
+            cfg.AddCommandHandler(typeof(CatchAllCommandWithResultHandler<,>)));
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new AddNumbers(1, 2), TestContext.Current.CancellationToken);
@@ -107,7 +107,7 @@ public class OpenGenericHandlerTests
     public void AddCommandHandler_OpenGeneric_WrongInterface_Throws()
     {
         Assert.Throws<ArgumentException>(() =>
-            CreateScope(s => s.AddCommandHandler(typeof(CatchAllRequestHandler<,>))));
+            CreateScope(cfg => cfg.AddCommandHandler(typeof(CatchAllRequestHandler<,>))));
     }
 
     #endregion
@@ -117,8 +117,8 @@ public class OpenGenericHandlerTests
     [Fact]
     public async Task AddNotificationHandler_OpenGeneric_ResolvesForAnyNotificationType()
     {
-        using var scope = CreateScope(s =>
-            s.AddNotificationHandler(typeof(CatchAllNotificationHandler<>)));
+        using var scope = CreateScope(cfg =>
+            cfg.AddNotificationHandler(typeof(CatchAllNotificationHandler<>)));
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new SomethingHappened("info"), TestContext.Current.CancellationToken);
@@ -128,7 +128,7 @@ public class OpenGenericHandlerTests
     public void AddNotificationHandler_OpenGeneric_WrongInterface_Throws()
     {
         Assert.Throws<ArgumentException>(() =>
-            CreateScope(s => s.AddNotificationHandler(typeof(CatchAllRequestHandler<,>))));
+            CreateScope(cfg => cfg.AddNotificationHandler(typeof(CatchAllRequestHandler<,>))));
     }
 
     #endregion
@@ -138,8 +138,8 @@ public class OpenGenericHandlerTests
     [Fact]
     public async Task AddHandlersFromAssembly_IncludesOpenGenericHandlers()
     {
-        using var scope = CreateScope(s =>
-            s.AddHandlersFromAssembly(
+        using var scope = CreateScope(cfg =>
+            cfg.AddHandlersFromAssembly(
                 typeof(OpenGenericHandlerTests).Assembly,
                 t => t == typeof(CatchAllRequestHandler<,>)));
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();

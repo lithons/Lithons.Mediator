@@ -16,13 +16,12 @@ namespace Lithons.Mediator.Tests;
 
 public class ServiceCollectionExtensionsTests
 {
-    private static ServiceProvider BuildServiceProvider(Action<IServiceCollection>? configure = null)
+    private static ServiceProvider BuildServiceProvider(Action<MediatorConfiguration>? configure = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
-        services.AddMediator();
-        configure?.Invoke(services);
+        services.AddMediator(configure);
         return services.BuildServiceProvider();
     }
 
@@ -122,7 +121,7 @@ public class ServiceCollectionExtensionsTests
     [Fact]
     public void AddRequestHandler_RegistersAsIRequestHandler()
     {
-        var sp = BuildServiceProvider(s => s.AddRequestHandler<SomeRequestHandler>());
+        var sp = BuildServiceProvider(cfg => cfg.AddRequestHandler<SomeRequestHandler>());
 
         var handlers = sp.GetServices<IRequestHandler>();
 
@@ -140,7 +139,7 @@ public class ServiceCollectionExtensionsTests
     [Fact]
     public void AddCommandHandler_RegistersAsICommandHandler()
     {
-        var sp = BuildServiceProvider(s => s.AddCommandHandler<SomeCommandHandler>());
+        var sp = BuildServiceProvider(cfg => cfg.AddCommandHandler<SomeCommandHandler>());
 
         var handlers = sp.GetServices<ICommandHandler>();
 
@@ -158,7 +157,7 @@ public class ServiceCollectionExtensionsTests
     [Fact]
     public void AddNotificationHandler_RegistersAsINotificationHandler()
     {
-        var sp = BuildServiceProvider(s => s.AddNotificationHandler<SomeNotificationHandler>());
+        var sp = BuildServiceProvider(cfg => cfg.AddNotificationHandler<SomeNotificationHandler>());
 
         var handlers = sp.GetServices<INotificationHandler>();
 
@@ -235,10 +234,10 @@ public class ServiceCollectionExtensionsTests
     {
         Assert.Throws<DuplicateHandlerException>(() =>
         {
-            BuildServiceProvider(s =>
+            BuildServiceProvider(cfg =>
             {
-                s.AddCommandHandler<SomeCommandHandler>();
-                s.AddCommandHandler<DuplicateSomeCommandHandler>();
+                cfg.AddCommandHandler<SomeCommandHandler>();
+                cfg.AddCommandHandler<DuplicateSomeCommandHandler>();
             });
         });
     }
@@ -262,8 +261,8 @@ public class ServiceCollectionExtensionsTests
     [Fact]
     public void AddHandlersFromAssembly_AssemblyWithNoHandlers_RegistersNothing()
     {
-        var sp = BuildServiceProvider(s =>
-            s.AddHandlersFromAssembly(typeof(IRequest).Assembly));
+        var sp = BuildServiceProvider(cfg =>
+            cfg.AddHandlersFromAssembly(typeof(IRequest).Assembly));
         using var scope = sp.CreateScope();
 
         var requestHandlers = scope.ServiceProvider.GetServices<IRequestHandler>().ToList();
@@ -310,12 +309,10 @@ public class ServiceCollectionExtensionsTests
     public void AddHandlersFromAssemblyContaining_UsesTypeAssembly()
     {
         var services1 = new ServiceCollection();
-        services1.AddMediator();
-        services1.AddHandlersFromAssembly(typeof(IRequest).Assembly);
+        services1.AddMediator(cfg => cfg.AddHandlersFromAssembly(typeof(IRequest).Assembly));
 
         var services2 = new ServiceCollection();
-        services2.AddMediator();
-        services2.AddHandlersFromAssemblyContaining<IRequest>();
+        services2.AddMediator(cfg => cfg.AddHandlersFromAssembly<IRequest>());
 
         Assert.Equal(services1.Count, services2.Count);
     }
