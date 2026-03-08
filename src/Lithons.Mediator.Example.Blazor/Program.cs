@@ -1,5 +1,4 @@
 using Lithons.Mediator.Example.Blazor.Components;
-using Lithons.Mediator.Example.Blazor.ExceptionHandlers;
 using Lithons.Mediator.Example.Blazor.Handlers;
 using Lithons.Mediator.Example.Blazor.Services;
 using Lithons.Mediator.Extensions;
@@ -12,11 +11,10 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddScoped<IStringService, StringService>();
 builder.Services.AddScoped<ExceptionLog>();
+
 builder.Services.AddMediator(cfg =>
 {
     cfg.AddHandlersFromAssembly<Program>();
-    cfg.AddExceptionHandler<DivideRequest, DivideExceptionHandler>();
-    cfg.AddExceptionHandler<GlobalExceptionHandler>();
 });
 
 var app = builder.Build();

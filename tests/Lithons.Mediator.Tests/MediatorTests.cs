@@ -2,6 +2,7 @@ using Lithons.Mediator.Abstractions.Contracts;
 using Lithons.Mediator.Abstractions.Middleware.Command;
 using Lithons.Mediator.Exceptions;
 using Lithons.Mediator.Extensions;
+using Lithons.Mediator.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -11,13 +12,15 @@ namespace Lithons.Mediator.Tests;
 
 public class MediatorTests
 {
-    private static IServiceScope CreateScope(Action<IServiceCollection> configure)
+    private static IServiceScope CreateScope(
+        Action<MediatorConfiguration>? configureMediatorAction = null,
+        Action<IServiceCollection>? configureServices = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
-        services.AddMediator();
-        configure(services);
+        configureServices?.Invoke(services);
+        services.AddMediator(configureMediatorAction);
         return services.BuildServiceProvider().CreateScope();
     }
 
@@ -40,7 +43,7 @@ public class MediatorTests
     [Fact]
     public async Task SendAsync_Request_ReturnsHandlerResult()
     {
-        using var scope = CreateScope(s => s.AddRequestHandler<EchoRequestHandler>());
+        using var scope = CreateScope(cfg => cfg.AddRequestHandler<EchoRequestHandler>());
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         var result = await mediator.SendAsync(new EchoRequest("hello"), TestContext.Current.CancellationToken);
@@ -51,7 +54,7 @@ public class MediatorTests
     [Fact]
     public async Task SendAsync_Request_NoHandler_ThrowsInvalidOperationException()
     {
-        using var scope = CreateScope(_ => { });
+        using var scope = CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await Assert.ThrowsAsync<HandlerNotFoundException>(
@@ -63,10 +66,10 @@ public class MediatorTests
     {
         Assert.Throws<DuplicateHandlerException>(() =>
         {
-            CreateScope(s =>
+            CreateScope(cfg =>
             {
-                s.AddRequestHandler<EchoRequestHandler>();
-                s.AddRequestHandler<EchoRequestHandlerDuplicate>();
+                cfg.AddRequestHandler<EchoRequestHandler>();
+                cfg.AddRequestHandler<EchoRequestHandlerDuplicate>();
             });
         });
     }
@@ -86,7 +89,7 @@ public class MediatorTests
     [Fact]
     public async Task SendAsync_Command_WithResult_ReturnsHandlerResult()
     {
-        using var scope = CreateScope(s => s.AddCommandHandler<AddCommandHandler>());
+        using var scope = CreateScope(cfg => cfg.AddCommandHandler<AddCommandHandler>());
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         var result = await mediator.SendAsync(new AddCommand(3, 4), TestContext.Current.CancellationToken);
@@ -97,7 +100,7 @@ public class MediatorTests
     [Fact]
     public async Task SendAsync_Command_NoHandler_ThrowsInvalidOperationException()
     {
-        using var scope = CreateScope(_ => { });
+        using var scope = CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await Assert.ThrowsAsync<HandlerNotFoundException>(
@@ -120,7 +123,7 @@ public class MediatorTests
     [Fact]
     public async Task SendAsync_Command_Void_ExecutesHandler()
     {
-        using var scope = CreateScope(s => s.AddCommandHandler<PingCommandHandler>());
+        using var scope = CreateScope(cfg => cfg.AddCommandHandler<PingCommandHandler>());
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
         var handler = scope.ServiceProvider.GetRequiredService<PingCommandHandler>();
 
@@ -132,7 +135,7 @@ public class MediatorTests
     [Fact]
     public async Task SendAsync_Command_WithExplicitStrategy_UsesStrategy()
     {
-        using var scope = CreateScope(s => s.AddCommandHandler<AddCommandHandler>());
+        using var scope = CreateScope(cfg => cfg.AddCommandHandler<AddCommandHandler>());
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         var result = await mediator.SendAsync(new AddCommand(10, 5), CommandStrategy.Default, TestContext.Current.CancellationToken);
@@ -172,7 +175,8 @@ public class MediatorTests
     public async Task SendAsync_Notification_SingleHandler_Invoked()
     {
         var handler = new OrderHandler1();
-        using var scope = CreateScope(s => s.AddSingleton<INotificationHandler<OrderPlacedNotification>>(handler));
+        using var scope = CreateScope(
+            configureServices: s => s.AddSingleton<INotificationHandler<OrderPlacedNotification>>(handler));
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new OrderPlacedNotification(42), TestContext.Current.CancellationToken);
@@ -185,11 +189,12 @@ public class MediatorTests
     {
         var handler1 = new OrderHandler1();
         var handler2 = new OrderHandler2();
-        using var scope = CreateScope(s =>
-        {
-            s.AddSingleton<INotificationHandler<OrderPlacedNotification>>(handler1);
-            s.AddSingleton<INotificationHandler<OrderPlacedNotification>>(handler2);
-        });
+        using var scope = CreateScope(
+            configureServices: s =>
+            {
+                s.AddSingleton<INotificationHandler<OrderPlacedNotification>>(handler1);
+                s.AddSingleton<INotificationHandler<OrderPlacedNotification>>(handler2);
+            });
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new OrderPlacedNotification(1), TestContext.Current.CancellationToken);
@@ -201,7 +206,7 @@ public class MediatorTests
     [Fact]
     public async Task SendAsync_Notification_NoHandlers_DoesNotThrow()
     {
-        using var scope = CreateScope(_ => { });
+        using var scope = CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new OrderPlacedNotification(99), TestContext.Current.CancellationToken);
@@ -212,11 +217,12 @@ public class MediatorTests
     {
         var handler1 = new OrderHandler1();
         var handler2 = new OrderHandler2();
-        using var scope = CreateScope(s =>
-        {
-            s.AddSingleton<INotificationHandler<OrderPlacedNotification>>(handler1);
-            s.AddSingleton<INotificationHandler<OrderPlacedNotification>>(handler2);
-        });
+        using var scope = CreateScope(
+            configureServices: s =>
+            {
+                s.AddSingleton<INotificationHandler<OrderPlacedNotification>>(handler1);
+                s.AddSingleton<INotificationHandler<OrderPlacedNotification>>(handler2);
+            });
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new OrderPlacedNotification(7), NotificationStrategy.Parallel, TestContext.Current.CancellationToken);
@@ -229,7 +235,8 @@ public class MediatorTests
     public async Task SendAsync_Notification_HandlerReceivesCorrectData()
     {
         var handler = new OrderHandler1();
-        using var scope = CreateScope(s => s.AddSingleton<INotificationHandler<OrderPlacedNotification>>(handler));
+        using var scope = CreateScope(
+            configureServices: s => s.AddSingleton<INotificationHandler<OrderPlacedNotification>>(handler));
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new OrderPlacedNotification(10), TestContext.Current.CancellationToken);
@@ -254,7 +261,7 @@ public class MediatorTests
     [Fact]
     public async Task SendAsync_Request_PropagatesCancellationToken()
     {
-        using var scope = CreateScope(s => s.AddRequestHandler<TokenRequestHandler>());
+        using var scope = CreateScope(cfg => cfg.AddRequestHandler<TokenRequestHandler>());
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
         using var cts = new CancellationTokenSource();
 
@@ -274,7 +281,7 @@ public class MediatorTests
     [Fact]
     public async Task SendAsync_Command_PropagatesCancellationToken()
     {
-        using var scope = CreateScope(s => s.AddCommandHandler<TokenCommandHandler>());
+        using var scope = CreateScope(cfg => cfg.AddCommandHandler<TokenCommandHandler>());
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
         using var cts = new CancellationTokenSource();
 
@@ -298,7 +305,7 @@ public class MediatorTests
     [Fact]
     public async Task SendAsync_GenericRequest_String_ReturnsCorrectResult()
     {
-        using var scope = CreateScope(s => s.AddRequestHandler<GenericRequestHandler<string>>());
+        using var scope = CreateScope(cfg => cfg.AddRequestHandler<GenericRequestHandler<string>>());
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         var result = await mediator.SendAsync(new GenericRequest<string>("hello"), TestContext.Current.CancellationToken);
@@ -309,7 +316,7 @@ public class MediatorTests
     [Fact]
     public async Task SendAsync_GenericRequest_Int_ReturnsCorrectResult()
     {
-        using var scope = CreateScope(s => s.AddRequestHandler<GenericRequestHandler<int>>());
+        using var scope = CreateScope(cfg => cfg.AddRequestHandler<GenericRequestHandler<int>>());
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         var result = await mediator.SendAsync(new GenericRequest<int>(42), TestContext.Current.CancellationToken);
@@ -320,10 +327,10 @@ public class MediatorTests
     [Fact]
     public async Task SendAsync_GenericRequest_MultipleTypeArgs_RoutedToCorrectHandler()
     {
-        using var scope = CreateScope(s =>
+        using var scope = CreateScope(cfg =>
         {
-            s.AddRequestHandler<GenericRequestHandler<string>>();
-            s.AddRequestHandler<GenericRequestHandler<int>>();
+            cfg.AddRequestHandler<GenericRequestHandler<string>>();
+            cfg.AddRequestHandler<GenericRequestHandler<int>>();
         });
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
@@ -345,7 +352,7 @@ public class MediatorTests
     [Fact]
     public async Task SendAsync_GenericCommand_String_ReturnsCorrectResult()
     {
-        using var scope = CreateScope(s => s.AddCommandHandler<GenericCommandHandler<string>>());
+        using var scope = CreateScope(cfg => cfg.AddCommandHandler<GenericCommandHandler<string>>());
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         var result = await mediator.SendAsync(new GenericCommand<string>("world"), TestContext.Current.CancellationToken);
@@ -356,7 +363,7 @@ public class MediatorTests
     [Fact]
     public async Task SendAsync_GenericCommand_Int_ReturnsCorrectResult()
     {
-        using var scope = CreateScope(s => s.AddCommandHandler<GenericCommandHandler<int>>());
+        using var scope = CreateScope(cfg => cfg.AddCommandHandler<GenericCommandHandler<int>>());
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         var result = await mediator.SendAsync(new GenericCommand<int>(7), TestContext.Current.CancellationToken);
@@ -367,10 +374,10 @@ public class MediatorTests
     [Fact]
     public async Task SendAsync_GenericCommand_MultipleTypeArgs_RoutedToCorrectHandler()
     {
-        using var scope = CreateScope(s =>
+        using var scope = CreateScope(cfg =>
         {
-            s.AddCommandHandler<GenericCommandHandler<string>>();
-            s.AddCommandHandler<GenericCommandHandler<int>>();
+            cfg.AddCommandHandler<GenericCommandHandler<string>>();
+            cfg.AddCommandHandler<GenericCommandHandler<int>>();
         });
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
@@ -398,7 +405,8 @@ public class MediatorTests
     public async Task SendAsync_GenericNotification_String_InvokesHandler()
     {
         var handler = new GenericNotificationHandler<string>();
-        using var scope = CreateScope(s => s.AddSingleton<INotificationHandler<GenericNotification<string>>>(handler));
+        using var scope = CreateScope(
+            configureServices: s => s.AddSingleton<INotificationHandler<GenericNotification<string>>>(handler));
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new GenericNotification<string>("event"), TestContext.Current.CancellationToken);
@@ -411,11 +419,12 @@ public class MediatorTests
     {
         var stringHandler = new GenericNotificationHandler<string>();
         var intHandler = new GenericNotificationHandler<int>();
-        using var scope = CreateScope(s =>
-        {
-            s.AddSingleton<INotificationHandler<GenericNotification<string>>>(stringHandler);
-            s.AddSingleton<INotificationHandler<GenericNotification<int>>>(intHandler);
-        });
+        using var scope = CreateScope(
+            configureServices: s =>
+            {
+                s.AddSingleton<INotificationHandler<GenericNotification<string>>>(stringHandler);
+                s.AddSingleton<INotificationHandler<GenericNotification<int>>>(intHandler);
+            });
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new GenericNotification<string>("hello"), TestContext.Current.CancellationToken);
@@ -448,11 +457,9 @@ public class MediatorTests
     public async Task SendAsync_Command_WithBackgroundStrategy_WritesCommandToChannel()
     {
         var commandsChannel = new InMemoryCommandsChannel();
-        using var scope = CreateScope(s =>
-        {
-            s.AddCommandHandler<BackgroundCommandHandler>();
-            s.AddSingleton<ICommandsChannel>(commandsChannel);
-        });
+        using var scope = CreateScope(
+            cfg => cfg.AddCommandHandler<BackgroundCommandHandler>(),
+            s => s.AddSingleton<ICommandsChannel>(commandsChannel));
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new BackgroundCommand(42), CommandStrategy.Background, TestContext.Current.CancellationToken);

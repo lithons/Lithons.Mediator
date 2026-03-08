@@ -39,11 +39,11 @@ public static class MediatorServiceCollectionExtensions
             return services;
         }
 
-        public IServiceCollection AddRequestHandler<THandler>()
+        internal IServiceCollection AddRequestHandler<THandler>()
             where THandler : class, IRequestHandler
             => services.AddRequestHandler(typeof(THandler));
 
-        public IServiceCollection AddRequestHandler(Type handlerType)
+        internal IServiceCollection AddRequestHandler(Type handlerType)
         {
             if (handlerType.IsGenericTypeDefinition)
             {
@@ -64,11 +64,11 @@ public static class MediatorServiceCollectionExtensions
             return services;
         }
 
-        public IServiceCollection AddCommandHandler<THandler>()
+        internal IServiceCollection AddCommandHandler<THandler>()
             where THandler : class, ICommandHandler
             => services.AddCommandHandler(typeof(THandler));
 
-        public IServiceCollection AddCommandHandler(Type handlerType)
+        internal IServiceCollection AddCommandHandler(Type handlerType)
         {
             if (handlerType.IsGenericTypeDefinition)
             {
@@ -95,11 +95,11 @@ public static class MediatorServiceCollectionExtensions
             return services;
         }
 
-        public IServiceCollection AddNotificationHandler<THandler>()
+        internal IServiceCollection AddNotificationHandler<THandler>()
             where THandler : class, INotificationHandler
             => services.AddNotificationHandler(typeof(THandler));
 
-        public IServiceCollection AddNotificationHandler(Type handlerType)
+        internal IServiceCollection AddNotificationHandler(Type handlerType)
         {
             if (handlerType.IsGenericTypeDefinition)
             {
@@ -120,7 +120,7 @@ public static class MediatorServiceCollectionExtensions
             return services;
         }
 
-        public IServiceCollection AddHandlersFromAssembly(Assembly assembly, Func<Type, bool>? filter = null)
+        internal IServiceCollection AddHandlersFromAssembly(Assembly assembly, Func<Type, bool>? filter = null)
         {
             var allTypes = assembly.GetTypes()
                 .Where(t => t is { IsAbstract: false, IsInterface: false }
@@ -142,27 +142,19 @@ public static class MediatorServiceCollectionExtensions
 
                 if (typeof(INotificationHandler).IsAssignableFrom(type))
                     RegisterNotificationHandlerCore(services, type);
+
+                if (typeof(IExceptionHandler).IsAssignableFrom(type))
+                    services.TryAddScoped(typeof(IExceptionHandler), type);
+
+                RegisterTypedExceptionHandlerInterfaces(services, type);
             }
 
             return services;
         }
 
-        public IServiceCollection AddHandlersFromAssemblyContaining<T>(Func<Type, bool>? filter = null)
+        internal IServiceCollection AddHandlersFromAssemblyContaining<T>(Func<Type, bool>? filter = null)
             => services.AddHandlersFromAssembly(typeof(T).Assembly, filter);
 
-        public IServiceCollection AddExceptionHandler<THandler>()
-            where THandler : class, IExceptionHandler
-        {
-            services.TryAddScoped<IExceptionHandler, THandler>();
-            return services;
-        }
-
-        public IServiceCollection AddExceptionHandler<TMessage, THandler>()
-            where THandler : class, IExceptionHandler<TMessage>
-        {
-            services.TryAddScoped<IExceptionHandler<TMessage>, THandler>();
-            return services;
-        }
     }
 
     private static void RegisterRequestHandlerCore(IServiceCollection services, Type handlerType)
@@ -232,6 +224,15 @@ public static class MediatorServiceCollectionExtensions
                 nameof(openGenericHandlerType));
     }
 
+    private static void RegisterTypedExceptionHandlerInterfaces(IServiceCollection services, Type handlerType)
+    {
+        foreach (var iface in handlerType.GetInterfaces()
+                     .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IExceptionHandler<>)))
+        {
+            services.TryAddScoped(iface, handlerType);
+        }
+    }
+
     private static bool ImplementsOpenGeneric(Type type, Type openGenericInterface)
         => type.IsGenericTypeDefinition
            && type.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == openGenericInterface);
@@ -248,5 +249,8 @@ public static class MediatorServiceCollectionExtensions
 
         if (ImplementsOpenGeneric(type, typeof(INotificationHandler<>)))
             services.AddScoped(typeof(INotificationHandler<>), type);
+
+        if (ImplementsOpenGeneric(type, typeof(IExceptionHandler<>)))
+            services.TryAddScoped(typeof(IExceptionHandler<>), type);
     }
 }

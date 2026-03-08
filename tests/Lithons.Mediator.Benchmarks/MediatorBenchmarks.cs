@@ -62,12 +62,14 @@ public class MediatorBenchmarks
         var services = new ServiceCollection();
         services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
-        services.AddMediator();
-        services.AddRequestHandler<EchoRequestHandler>();
-        services.AddCommandHandler<AddCommandHandler>();
-        services.AddCommandHandler<PingCommandHandler>();
-        services.AddNotificationHandler<OrderHandler1>();
-        services.AddNotificationHandler<OrderHandler2>();
+        services.AddMediator(cfg =>
+        {
+            cfg.AddRequestHandler<EchoRequestHandler>();
+            cfg.AddCommandHandler<AddCommandHandler>();
+            cfg.AddCommandHandler<PingCommandHandler>();
+            cfg.AddNotificationHandler<OrderHandler1>();
+            cfg.AddNotificationHandler<OrderHandler2>();
+        });
 
         var provider = services.BuildServiceProvider();
         _scope = provider.CreateScope();

@@ -6,7 +6,7 @@
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/lithons/Lithons.Mediator/blob/main/LICENSE)
 
-A lightweight mediator implementation for .NET with first-class support for **requests**, **commands**, and **notifications** — each with its own configurable middleware pipeline.
+A lightweight mediator for .NET with first-class support for **requests**, **commands**, and **notifications** — each with its own configurable middleware pipeline.
 
 ## Installation
 
@@ -16,27 +16,7 @@ dotnet add package Lithons.Mediator
 
 > Requires .NET 10 or later.
 
-## Registration
-
-```csharp
-builder.Services.AddMediator();
-```
-
-Register your handlers individually:
-
-```csharp
-builder.Services
-    .AddRequestHandler<GetUserByIdHandler>()
-    .AddCommandHandler<CreateUserHandler>()
-    .AddNotificationHandler<UserCreatedEmailHandler>()
-    .AddNotificationHandler<UserCreatedAuditHandler>();
-```
-
----
-
 ## Concepts
-
-Lithons.Mediator distinguishes between three message types:
 
 | Type | Interface | Handlers | Returns |
 |---|---|---|---|
@@ -44,128 +24,105 @@ Lithons.Mediator distinguishes between three message types:
 | Command | `ICommand` / `ICommand<T>` | exactly one | nothing / `T` |
 | Notification | `INotification` | zero or more | — |
 
-Inject `IMediator` (or the narrower `IRequestSender`, `ICommandSender`, `INotificationSender`) wherever you need to send messages.
+Inject `IMediator` (or the narrower `IRequestSender`, `ICommandSender`, `INotificationSender`) to send messages.
 
----
+## Registration
+
+Scan an assembly to auto-register all handlers:
+
+```csharp
+builder.Services.AddMediator(cfg =>
+{
+    cfg.AddHandlersFromAssembly<Program>();
+});
+```
+
+You can pass an `Assembly` directly or supply a filter:
+
+```csharp
+cfg.AddHandlersFromAssembly(typeof(Program).Assembly);
+cfg.AddHandlersFromAssembly<Program>(type => type.Namespace?.StartsWith("MyApp.Handlers") == true);
+```
+
+Or register handlers individually:
+
+```csharp
+cfg.AddRequestHandler<GetUserByIdHandler>();
+cfg.AddCommandHandler<CreateUserHandler>();
+cfg.AddNotificationHandler<UserCreatedEmailHandler>();
+```
 
 ## Requests
 
-Use a request when you need to **query** something and get a result back. Exactly one handler must be registered.
+Query something and get a result back. Exactly one handler must be registered.
 
 ```csharp
-// Define
 public record GetUserById(int Id) : IRequest<UserDto>;
 
-// Handle
 public class GetUserByIdHandler : IRequestHandler<GetUserById, UserDto>
 {
     public async Task<UserDto> Handle(GetUserById request, CancellationToken cancellationToken)
-    {
-        // ...
-        return new UserDto(request.Id, "Alice");
-    }
+        => new UserDto(request.Id, "Alice");
 }
 
-// Send
 var user = await mediator.SendAsync(new GetUserById(42), cancellationToken);
 ```
 
----
-
 ## Commands
 
-Use a command when you want to **trigger a side effect**. Commands can optionally return a result.
-
-**Without a result:**
+Trigger a side effect. Commands can optionally return a result.
 
 ```csharp
-// Define
+// Without a result
 public record DeleteUser(int Id) : ICommand;
 
-// Handle
 public class DeleteUserHandler : ICommandHandler<DeleteUser>
 {
-    public async Task Handle(DeleteUser command, CancellationToken cancellationToken)
-    {
-        // ...
-    }
+    public async Task Handle(DeleteUser command, CancellationToken cancellationToken) { /* ... */ }
 }
 
-// Send
 await mediator.SendAsync(new DeleteUser(42), cancellationToken);
-```
 
-**With a result:**
-
-```csharp
-// Define
+// With a result
 public record CreateUser(string Name) : ICommand<int>;
 
-// Handle
 public class CreateUserHandler : ICommandHandler<CreateUser, int>
 {
-    public async Task<int> Handle(CreateUser command, CancellationToken cancellationToken)
-    {
-        // ...
-        return newUserId;
-    }
+    public async Task<int> Handle(CreateUser command, CancellationToken cancellationToken) => newUserId;
 }
 
-// Send
 int id = await mediator.SendAsync(new CreateUser("Alice"), cancellationToken);
 ```
 
 ### Command strategies
 
-Commands support an optional execution strategy. Pass one inline or configure the default in `MediatorOptions`.
-
-```csharp
-// Run in the background (fire-and-forget via ICommandsChannel)
-await mediator.SendAsync(new DeleteUser(42), CommandStrategy.Background, cancellationToken);
-```
-
 | Strategy | Description |
 |---|---|
-| `CommandStrategy.Default` | Executes inline, same as no strategy |
+| `CommandStrategy.Default` | Executes inline *(default)* |
 | `CommandStrategy.Background` | Queues onto `ICommandsChannel` for background processing |
 
-Configure the default:
-
 ```csharp
+await mediator.SendAsync(new DeleteUser(42), CommandStrategy.Background, cancellationToken);
+
+// Or configure the default
 builder.Services.AddMediator(options =>
 {
     options.DefaultCommandStrategy = CommandStrategy.Background;
 });
 ```
 
----
-
 ## Notifications
 
-Use a notification when you want to **broadcast an event** to multiple independent handlers.
+Broadcast an event to zero or more independent handlers.
 
 ```csharp
-// Define
 public record UserCreated(int UserId) : INotification;
 
-// Handle (register as many handlers as you need)
 public class SendWelcomeEmailHandler : INotificationHandler<UserCreated>
 {
-    public async Task Handle(UserCreated notification, CancellationToken cancellationToken)
-    {
-        // send email...
-    }
+    public async Task Handle(UserCreated notification, CancellationToken cancellationToken) { /* ... */ }
 }
 
-public class AuditLogHandler : INotificationHandler<UserCreated>
-{
-    public async Task Handle(UserCreated notification, CancellationToken cancellationToken)
-    {
-        // write audit log...
-    }
-}
-
-// Publish
 await mediator.SendAsync(new UserCreated(42), cancellationToken);
 ```
 
@@ -178,46 +135,37 @@ await mediator.SendAsync(new UserCreated(42), cancellationToken);
 
 ```csharp
 await mediator.SendAsync(new UserCreated(42), NotificationStrategy.Parallel, cancellationToken);
-```
 
-Configure the default:
-
-```csharp
+// Or configure the default
 builder.Services.AddMediator(options =>
 {
     options.DefaultNotificationStrategy = NotificationStrategy.Parallel;
 });
 ```
 
----
-
 ## Middleware pipelines
 
-Each message type has its own pipeline that you can customise with middleware. Pipelines are singletons and should be configured once at startup.
+Each message type has its own pipeline. Pipelines are singletons configured once at startup.
+
+**Inline middleware:**
 
 ```csharp
-// Resolve the pipeline and call Setup before the app starts
 var requestPipeline = app.Services.GetRequiredService<IRequestPipeline>();
 
 requestPipeline.Setup(builder =>
 {
     builder.Use(next => async ctx =>
     {
-        // runs before every request handler
-        Console.WriteLine($"Handling {ctx.Request.GetType().Name}");
+        Console.WriteLine($"→ {ctx.Request.GetType().Name}");
         await next(ctx);
-        Console.WriteLine($"Handled {ctx.Request.GetType().Name}");
+        Console.WriteLine($"← {ctx.Request.GetType().Name}");
     });
 
     builder.UseRequestHandlers(); // must be last
 });
 ```
 
-The same pattern applies to `ICommandPipeline` / `UseCommandHandlers()` and `INotificationPipeline` / `UseNotificationHandlers()`.
-
-### Typed middleware classes
-
-For reusable middleware, implement the corresponding interface and register it with `UseMiddleware<T>()`:
+**Typed middleware class:**
 
 ```csharp
 public class LoggingRequestMiddleware(RequestMiddlewareDelegate next) : IRequestMiddleware
@@ -237,42 +185,29 @@ requestPipeline.Setup(builder =>
 });
 ```
 
+The same pattern applies to `ICommandPipeline` / `UseCommandHandlers()` and `INotificationPipeline` / `UseNotificationHandlers()`.
+
 | Pipeline | Interface | Context type |
 |---|---|---|
 | `IRequestPipeline` | `IRequestMiddleware` | `RequestContext` |
 | `ICommandPipeline` | `ICommandMiddleware` | `CommandContext` |
 | `INotificationPipeline` | `INotificationMiddleware` | `NotificationContext` |
 
----
-
 ## Exception handling
 
-Register an exception handler to catch unhandled exceptions from any pipeline **without writing middleware**. Handlers return `true` to swallow the exception or `false` to let it propagate.
+Register exception handlers to catch unhandled exceptions from any pipeline without writing middleware. Return `true` to swallow the exception or `false` to let it propagate.
 
-### Typed exception handler
-
-Handle exceptions for a **specific message type**:
+**Typed** — handles exceptions for a specific message type:
 
 ```csharp
 public class GetUserByIdExceptionHandler : IExceptionHandler<GetUserById>
 {
     public ValueTask<bool> Handle(Exception exception, GetUserById message, CancellationToken cancellationToken)
-    {
-        // log, wrap, or swallow
-        return ValueTask.FromResult(true); // handled — don't rethrow
-    }
+        => ValueTask.FromResult(true); // handled — don’t rethrow
 }
 ```
 
-Register it:
-
-```csharp
-builder.Services.AddExceptionHandler<GetUserById, GetUserByIdExceptionHandler>();
-```
-
-### Global exception handler
-
-Handle exceptions for **all message types** as a catch-all:
+**Global** — catch-all for all message types:
 
 ```csharp
 public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
@@ -285,13 +220,7 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
 }
 ```
 
-Register it:
-
-```csharp
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-```
-
-Or via `MediatorConfiguration`:
+Register via `MediatorConfiguration`:
 
 ```csharp
 builder.Services.AddMediator(cfg =>
@@ -303,8 +232,6 @@ builder.Services.AddMediator(cfg =>
 
 ### Resolution order
 
-1. **Typed handler** — `IExceptionHandler<TMessage>` is tried first.
-2. **Global handler** — `IExceptionHandler` is tried if no typed handler handled the exception.
-3. **Rethrow** — if neither handler returns `true`, the original exception propagates.
-
-> `OperationCanceledException` is never caught by exception handlers.
+1. **Typed** — `IExceptionHandler<TMessage>` is tried first.
+2. **Global** — `IExceptionHandler` is tried if no typed handler handled it.
+3. **Rethrow** — if neither returns `true`, the original exception propagates.

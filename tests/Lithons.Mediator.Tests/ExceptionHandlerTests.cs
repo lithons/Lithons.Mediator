@@ -1,6 +1,7 @@
 using Lithons.Mediator.Abstractions.Contracts;
 using Lithons.Mediator.Exceptions;
 using Lithons.Mediator.Extensions;
+using Lithons.Mediator.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -9,13 +10,15 @@ namespace Lithons.Mediator.Tests;
 
 public class ExceptionHandlerTests
 {
-    private static IServiceScope CreateScope(Action<IServiceCollection> configure)
+    private static IServiceScope CreateScope(
+        Action<MediatorConfiguration>? configureMediatorAction = null,
+        Action<IServiceCollection>? configureServices = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
-        services.AddMediator();
-        configure(services);
+        configureServices?.Invoke(services);
+        services.AddMediator(configureMediatorAction);
         return services.BuildServiceProvider().CreateScope();
     }
 
@@ -83,11 +86,9 @@ public class ExceptionHandlerTests
     public async Task Request_GlobalExceptionHandler_HandlesException()
     {
         var exHandler = new TrackingGlobalExceptionHandler();
-        using var scope = CreateScope(s =>
-        {
-            s.AddRequestHandler<FailingRequestHandler>();
-            s.AddSingleton<IExceptionHandler>(exHandler);
-        });
+        using var scope = CreateScope(
+            cfg => cfg.AddRequestHandler<FailingRequestHandler>(),
+            s => s.AddSingleton<IExceptionHandler>(exHandler));
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new FailingRequest("test"), TestContext.Current.CancellationToken);
@@ -101,11 +102,9 @@ public class ExceptionHandlerTests
     public async Task Request_GlobalExceptionHandler_NotHandled_Rethrows()
     {
         var exHandler = new TrackingGlobalExceptionHandler { ShouldHandle = false };
-        using var scope = CreateScope(s =>
-        {
-            s.AddRequestHandler<FailingRequestHandler>();
-            s.AddSingleton<IExceptionHandler>(exHandler);
-        });
+        using var scope = CreateScope(
+            cfg => cfg.AddRequestHandler<FailingRequestHandler>(),
+            s => s.AddSingleton<IExceptionHandler>(exHandler));
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await Assert.ThrowsAsync<InvalidOperationException>(
@@ -118,11 +117,9 @@ public class ExceptionHandlerTests
     public async Task VoidCommand_GlobalExceptionHandler_HandlesException()
     {
         var exHandler = new TrackingGlobalExceptionHandler();
-        using var scope = CreateScope(s =>
-        {
-            s.AddCommandHandler<FailingCommandHandler>();
-            s.AddSingleton<IExceptionHandler>(exHandler);
-        });
+        using var scope = CreateScope(
+            cfg => cfg.AddCommandHandler<FailingCommandHandler>(),
+            s => s.AddSingleton<IExceptionHandler>(exHandler));
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new FailingCommand("test"), TestContext.Current.CancellationToken);
@@ -135,11 +132,9 @@ public class ExceptionHandlerTests
     public async Task ResultCommand_GlobalExceptionHandler_HandlesException()
     {
         var exHandler = new TrackingGlobalExceptionHandler();
-        using var scope = CreateScope(s =>
-        {
-            s.AddCommandHandler<FailingResultCommandHandler>();
-            s.AddSingleton<IExceptionHandler>(exHandler);
-        });
+        using var scope = CreateScope(
+            cfg => cfg.AddCommandHandler<FailingResultCommandHandler>(),
+            s => s.AddSingleton<IExceptionHandler>(exHandler));
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new FailingResultCommand(1), TestContext.Current.CancellationToken);
@@ -152,11 +147,12 @@ public class ExceptionHandlerTests
     public async Task Notification_GlobalExceptionHandler_HandlesException()
     {
         var exHandler = new TrackingGlobalExceptionHandler();
-        using var scope = CreateScope(s =>
-        {
-            s.AddSingleton<INotificationHandler<FailingNotification>>(new FailingNotificationHandler());
-            s.AddSingleton<IExceptionHandler>(exHandler);
-        });
+        using var scope = CreateScope(
+            configureServices: s =>
+            {
+                s.AddSingleton<INotificationHandler<FailingNotification>>(new FailingNotificationHandler());
+                s.AddSingleton<IExceptionHandler>(exHandler);
+            });
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new FailingNotification(42), TestContext.Current.CancellationToken);
@@ -211,11 +207,9 @@ public class ExceptionHandlerTests
     public async Task Request_TypedExceptionHandler_HandlesException()
     {
         var exHandler = new TypedRequestExceptionHandler();
-        using var scope = CreateScope(s =>
-        {
-            s.AddRequestHandler<FailingRequestHandler>();
-            s.AddSingleton<IExceptionHandler<FailingRequest>>(exHandler);
-        });
+        using var scope = CreateScope(
+            cfg => cfg.AddRequestHandler<FailingRequestHandler>(),
+            s => s.AddSingleton<IExceptionHandler<FailingRequest>>(exHandler));
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new FailingRequest("test"), TestContext.Current.CancellationToken);
@@ -228,11 +222,9 @@ public class ExceptionHandlerTests
     public async Task Request_TypedExceptionHandler_NotHandled_Rethrows()
     {
         var exHandler = new TypedRequestExceptionHandler { ShouldHandle = false };
-        using var scope = CreateScope(s =>
-        {
-            s.AddRequestHandler<FailingRequestHandler>();
-            s.AddSingleton<IExceptionHandler<FailingRequest>>(exHandler);
-        });
+        using var scope = CreateScope(
+            cfg => cfg.AddRequestHandler<FailingRequestHandler>(),
+            s => s.AddSingleton<IExceptionHandler<FailingRequest>>(exHandler));
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await Assert.ThrowsAsync<InvalidOperationException>(
@@ -245,11 +237,9 @@ public class ExceptionHandlerTests
     public async Task VoidCommand_TypedExceptionHandler_HandlesException()
     {
         var exHandler = new TypedCommandExceptionHandler();
-        using var scope = CreateScope(s =>
-        {
-            s.AddCommandHandler<FailingCommandHandler>();
-            s.AddSingleton<IExceptionHandler<FailingCommand>>(exHandler);
-        });
+        using var scope = CreateScope(
+            cfg => cfg.AddCommandHandler<FailingCommandHandler>(),
+            s => s.AddSingleton<IExceptionHandler<FailingCommand>>(exHandler));
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new FailingCommand("test"), TestContext.Current.CancellationToken);
@@ -261,11 +251,12 @@ public class ExceptionHandlerTests
     public async Task Notification_TypedExceptionHandler_HandlesException()
     {
         var exHandler = new TypedNotificationExceptionHandler();
-        using var scope = CreateScope(s =>
-        {
-            s.AddSingleton<INotificationHandler<FailingNotification>>(new FailingNotificationHandler());
-            s.AddSingleton<IExceptionHandler<FailingNotification>>(exHandler);
-        });
+        using var scope = CreateScope(
+            configureServices: s =>
+            {
+                s.AddSingleton<INotificationHandler<FailingNotification>>(new FailingNotificationHandler());
+                s.AddSingleton<IExceptionHandler<FailingNotification>>(exHandler);
+            });
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new FailingNotification(1), TestContext.Current.CancellationToken);
@@ -282,12 +273,13 @@ public class ExceptionHandlerTests
     {
         var typedHandler = new TypedRequestExceptionHandler();
         var globalHandler = new TrackingGlobalExceptionHandler();
-        using var scope = CreateScope(s =>
-        {
-            s.AddRequestHandler<FailingRequestHandler>();
-            s.AddSingleton<IExceptionHandler<FailingRequest>>(typedHandler);
-            s.AddSingleton<IExceptionHandler>(globalHandler);
-        });
+        using var scope = CreateScope(
+            cfg => cfg.AddRequestHandler<FailingRequestHandler>(),
+            s =>
+            {
+                s.AddSingleton<IExceptionHandler<FailingRequest>>(typedHandler);
+                s.AddSingleton<IExceptionHandler>(globalHandler);
+            });
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new FailingRequest("test"), TestContext.Current.CancellationToken);
@@ -301,12 +293,13 @@ public class ExceptionHandlerTests
     {
         var typedHandler = new TypedRequestExceptionHandler { ShouldHandle = false };
         var globalHandler = new TrackingGlobalExceptionHandler();
-        using var scope = CreateScope(s =>
-        {
-            s.AddRequestHandler<FailingRequestHandler>();
-            s.AddSingleton<IExceptionHandler<FailingRequest>>(typedHandler);
-            s.AddSingleton<IExceptionHandler>(globalHandler);
-        });
+        using var scope = CreateScope(
+            cfg => cfg.AddRequestHandler<FailingRequestHandler>(),
+            s =>
+            {
+                s.AddSingleton<IExceptionHandler<FailingRequest>>(typedHandler);
+                s.AddSingleton<IExceptionHandler>(globalHandler);
+            });
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new FailingRequest("test"), TestContext.Current.CancellationToken);
@@ -322,7 +315,7 @@ public class ExceptionHandlerTests
     [Fact]
     public async Task Request_NoExceptionHandler_ExceptionPropagates()
     {
-        using var scope = CreateScope(s => s.AddRequestHandler<FailingRequestHandler>());
+        using var scope = CreateScope(cfg => cfg.AddRequestHandler<FailingRequestHandler>());
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await Assert.ThrowsAsync<InvalidOperationException>(
@@ -332,7 +325,7 @@ public class ExceptionHandlerTests
     [Fact]
     public async Task VoidCommand_NoExceptionHandler_ExceptionPropagates()
     {
-        using var scope = CreateScope(s => s.AddCommandHandler<FailingCommandHandler>());
+        using var scope = CreateScope(cfg => cfg.AddCommandHandler<FailingCommandHandler>());
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await Assert.ThrowsAsync<InvalidOperationException>(
@@ -342,8 +335,9 @@ public class ExceptionHandlerTests
     [Fact]
     public async Task Notification_NoExceptionHandler_ExceptionPropagates()
     {
-        using var scope = CreateScope(s =>
-            s.AddSingleton<INotificationHandler<FailingNotification>>(new FailingNotificationHandler()));
+        using var scope = CreateScope(
+            configureServices: s =>
+                s.AddSingleton<INotificationHandler<FailingNotification>>(new FailingNotificationHandler()));
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await Assert.ThrowsAsync<InvalidOperationException>(
@@ -358,11 +352,9 @@ public class ExceptionHandlerTests
     public async Task Request_OperationCanceled_NotCaughtByExceptionHandler()
     {
         var exHandler = new TrackingGlobalExceptionHandler();
-        using var scope = CreateScope(s =>
-        {
-            s.AddRequestHandler<CancellingRequestHandler>();
-            s.AddSingleton<IExceptionHandler>(exHandler);
-        });
+        using var scope = CreateScope(
+            cfg => cfg.AddRequestHandler<CancellingRequestHandler>(),
+            s => s.AddSingleton<IExceptionHandler>(exHandler));
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await Assert.ThrowsAsync<OperationCanceledException>(
@@ -387,11 +379,9 @@ public class ExceptionHandlerTests
     public async Task Request_NoException_ExceptionHandlerNotInvoked()
     {
         var exHandler = new TrackingGlobalExceptionHandler();
-        using var scope = CreateScope(s =>
-        {
-            s.AddRequestHandler<SuccessRequestHandler>();
-            s.AddSingleton<IExceptionHandler>(exHandler);
-        });
+        using var scope = CreateScope(
+            cfg => cfg.AddRequestHandler<SuccessRequestHandler>(),
+            s => s.AddSingleton<IExceptionHandler>(exHandler));
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         var result = await mediator.SendAsync(new SuccessRequest("ok"), TestContext.Current.CancellationToken);
@@ -402,29 +392,37 @@ public class ExceptionHandlerTests
 
     #endregion
 
-    #region Registration via AddExceptionHandler extensions
+    #region Registration via MediatorConfiguration
 
     [Fact]
-    public async Task AddExceptionHandler_Global_RegistersAndHandles()
+    public async Task MediatorConfiguration_AddExceptionHandler_Global()
     {
-        using var scope = CreateScope(s =>
+        var services = new ServiceCollection();
+        services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+        services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
+        services.AddMediator(cfg =>
         {
-            s.AddRequestHandler<FailingRequestHandler>();
-            s.AddExceptionHandler<SwallowAllExceptionHandler>();
+            cfg.AddExceptionHandler<SwallowAllExceptionHandler>();
+            cfg.AddRequestHandler<FailingRequestHandler>();
         });
+        using var scope = services.BuildServiceProvider().CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new FailingRequest("test"), TestContext.Current.CancellationToken);
     }
 
     [Fact]
-    public async Task AddExceptionHandler_Typed_RegistersAndHandles()
+    public async Task MediatorConfiguration_AddExceptionHandler_Typed()
     {
-        using var scope = CreateScope(s =>
+        var services = new ServiceCollection();
+        services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+        services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
+        services.AddMediator(cfg =>
         {
-            s.AddRequestHandler<FailingRequestHandler>();
-            s.AddExceptionHandler<FailingRequest, SwallowFailingRequestExceptionHandler>();
+            cfg.AddExceptionHandler<FailingRequest, SwallowFailingRequestExceptionHandler>();
+            cfg.AddRequestHandler<FailingRequestHandler>();
         });
+        using var scope = services.BuildServiceProvider().CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
         await mediator.SendAsync(new FailingRequest("test"), TestContext.Current.CancellationToken);
@@ -440,38 +438,6 @@ public class ExceptionHandlerTests
     {
         public ValueTask<bool> Handle(Exception exception, FailingRequest message, CancellationToken cancellationToken)
             => ValueTask.FromResult(true);
-    }
-
-    #endregion
-
-    #region Registration via MediatorConfiguration
-
-    [Fact]
-    public async Task MediatorConfiguration_AddExceptionHandler_Global()
-    {
-        var services = new ServiceCollection();
-        services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
-        services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
-        services.AddMediator(cfg => cfg.AddExceptionHandler<SwallowAllExceptionHandler>());
-        services.AddRequestHandler<FailingRequestHandler>();
-        using var scope = services.BuildServiceProvider().CreateScope();
-        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-
-        await mediator.SendAsync(new FailingRequest("test"), TestContext.Current.CancellationToken);
-    }
-
-    [Fact]
-    public async Task MediatorConfiguration_AddExceptionHandler_Typed()
-    {
-        var services = new ServiceCollection();
-        services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
-        services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
-        services.AddMediator(cfg => cfg.AddExceptionHandler<FailingRequest, SwallowFailingRequestExceptionHandler>());
-        services.AddRequestHandler<FailingRequestHandler>();
-        using var scope = services.BuildServiceProvider().CreateScope();
-        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-
-        await mediator.SendAsync(new FailingRequest("test"), TestContext.Current.CancellationToken);
     }
 
     #endregion
