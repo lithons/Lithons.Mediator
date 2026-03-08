@@ -41,44 +41,107 @@ public static class MediatorServiceCollectionExtensions
 
         public IServiceCollection AddRequestHandler<THandler>()
             where THandler : class, IRequestHandler
+            => services.AddRequestHandler(typeof(THandler));
+
+        public IServiceCollection AddRequestHandler(Type handlerType)
         {
-            RegisterRequestHandlerCore(services, typeof(THandler));
+            if (handlerType.IsGenericTypeDefinition)
+            {
+                ValidateOpenGenericHandler(handlerType, typeof(IRequestHandler<,>));
+                services.AddScoped(typeof(IRequestHandler<,>), handlerType);
+            }
+            else if (typeof(IRequestHandler).IsAssignableFrom(handlerType))
+            {
+                RegisterRequestHandlerCore(services, handlerType);
+            }
+            else
+            {
+                throw new ArgumentException(
+                    $"Type '{handlerType.Name}' must implement IRequestHandler.",
+                    nameof(handlerType));
+            }
+
             return services;
         }
 
         public IServiceCollection AddCommandHandler<THandler>()
             where THandler : class, ICommandHandler
+            => services.AddCommandHandler(typeof(THandler));
+
+        public IServiceCollection AddCommandHandler(Type handlerType)
         {
-            RegisterCommandHandlerCore(services, typeof(THandler));
+            if (handlerType.IsGenericTypeDefinition)
+            {
+                if (ImplementsOpenGeneric(handlerType, typeof(ICommandHandler<,>)))
+                    services.AddScoped(typeof(ICommandHandler<,>), handlerType);
+                else if (ImplementsOpenGeneric(handlerType, typeof(ICommandHandler<>)))
+                    services.AddScoped(typeof(ICommandHandler<>), handlerType);
+                else
+                    throw new ArgumentException(
+                        $"Type '{handlerType.Name}' must implement ICommandHandler<> or ICommandHandler<,>.",
+                        nameof(handlerType));
+            }
+            else if (typeof(ICommandHandler).IsAssignableFrom(handlerType))
+            {
+                RegisterCommandHandlerCore(services, handlerType);
+            }
+            else
+            {
+                throw new ArgumentException(
+                    $"Type '{handlerType.Name}' must implement ICommandHandler.",
+                    nameof(handlerType));
+            }
+
             return services;
         }
 
         public IServiceCollection AddNotificationHandler<THandler>()
             where THandler : class, INotificationHandler
+            => services.AddNotificationHandler(typeof(THandler));
+
+        public IServiceCollection AddNotificationHandler(Type handlerType)
         {
-            RegisterNotificationHandlerCore(services, typeof(THandler));
+            if (handlerType.IsGenericTypeDefinition)
+            {
+                ValidateOpenGenericHandler(handlerType, typeof(INotificationHandler<>));
+                services.AddScoped(typeof(INotificationHandler<>), handlerType);
+            }
+            else if (typeof(INotificationHandler).IsAssignableFrom(handlerType))
+            {
+                RegisterNotificationHandlerCore(services, handlerType);
+            }
+            else
+            {
+                throw new ArgumentException(
+                    $"Type '{handlerType.Name}' must implement INotificationHandler.",
+                    nameof(handlerType));
+            }
+
             return services;
         }
 
         public IServiceCollection AddHandlersFromAssembly(Assembly assembly, Func<Type, bool>? filter = null)
         {
-            var handlerTypes = assembly.GetTypes()
-                .Where(t => t is { IsAbstract: false, IsInterface: false, IsGenericTypeDefinition: false }
-                    && (typeof(IRequestHandler).IsAssignableFrom(t)
-                        || typeof(ICommandHandler).IsAssignableFrom(t)
-                        || typeof(INotificationHandler).IsAssignableFrom(t))
+            var allTypes = assembly.GetTypes()
+                .Where(t => t is { IsAbstract: false, IsInterface: false }
                     && (filter == null || filter(t)));
 
-            foreach (var handlerType in handlerTypes)
+            foreach (var type in allTypes)
             {
-                if (typeof(IRequestHandler).IsAssignableFrom(handlerType))
-                    RegisterRequestHandlerCore(services, handlerType);
+                if (type.IsGenericTypeDefinition)
+                {
+                    RegisterOpenGenericIfApplicable(services, type);
+                    continue;
+                }
 
-                if (typeof(ICommandHandler).IsAssignableFrom(handlerType))
-                    RegisterCommandHandlerCore(services, handlerType);
+                if (typeof(IRequestHandler).IsAssignableFrom(type))
+                    RegisterRequestHandlerCore(services, type);
 
-                if (typeof(INotificationHandler).IsAssignableFrom(handlerType))
-                    RegisterNotificationHandlerCore(services, handlerType);
+                if (typeof(ICommandHandler).IsAssignableFrom(type))
+                    RegisterCommandHandlerCore(services, type);
+
+                if (typeof(INotificationHandler).IsAssignableFrom(type))
+                    RegisterNotificationHandlerCore(services, type);
             }
 
             return services;
@@ -140,5 +203,36 @@ public static class MediatorServiceCollectionExtensions
         {
             services.AddScoped(handler, sp => sp.GetRequiredService(handlerType));
         }
+    }
+
+    private static void ValidateOpenGenericHandler(Type openGenericHandlerType, Type expectedInterface)
+    {
+        if (!openGenericHandlerType.IsGenericTypeDefinition)
+            throw new ArgumentException(
+                $"Type '{openGenericHandlerType.Name}' must be an open generic type definition.",
+                nameof(openGenericHandlerType));
+
+        if (!ImplementsOpenGeneric(openGenericHandlerType, expectedInterface))
+            throw new ArgumentException(
+                $"Type '{openGenericHandlerType.Name}' must implement {expectedInterface.Name}.",
+                nameof(openGenericHandlerType));
+    }
+
+    private static bool ImplementsOpenGeneric(Type type, Type openGenericInterface)
+        => type.IsGenericTypeDefinition
+           && type.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == openGenericInterface);
+
+    private static void RegisterOpenGenericIfApplicable(IServiceCollection services, Type type)
+    {
+        if (ImplementsOpenGeneric(type, typeof(IRequestHandler<,>)))
+            services.AddScoped(typeof(IRequestHandler<,>), type);
+
+        if (ImplementsOpenGeneric(type, typeof(ICommandHandler<,>)))
+            services.AddScoped(typeof(ICommandHandler<,>), type);
+        else if (ImplementsOpenGeneric(type, typeof(ICommandHandler<>)))
+            services.AddScoped(typeof(ICommandHandler<>), type);
+
+        if (ImplementsOpenGeneric(type, typeof(INotificationHandler<>)))
+            services.AddScoped(typeof(INotificationHandler<>), type);
     }
 }
